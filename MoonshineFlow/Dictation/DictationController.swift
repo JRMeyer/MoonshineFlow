@@ -38,6 +38,8 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private let hotkeyManager: HotkeyManager
     private let processingQueue = DispatchQueue(label: "ai.moonshine.flow.dictation")
     private var transcriber: Transcriber?
+    private var insertionMode: TextInjector.InsertionMode = .pasteboard
+    private var streamingFailed = false
 
     init(modelURL: URL?, hotkey: HotkeyManager.Hotkey = .rightOption) {
         self.modelURL = modelURL
@@ -96,6 +98,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         refreshPermissions()
         lastError = ""
         previewText = ""
+        streamingFailed = false
 
         do {
             try ensureMicrophonePermission()
@@ -108,12 +111,17 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                 transcriber = Transcriber(modelPath: modelURL.path)
             }
 
+            // Detect insertion mode and begin streaming session before starting audio
+            textInjector.beginStreamingSession()
+            insertionMode = textInjector.detectInsertionMode()
+
             try transcriber?.reset()
             textStateManager.reset()
             chunkBuffer.reset()
             state = .listening
             try audioEngine.start()
         } catch {
+            textInjector.endStreamingSession()
             state = .idle
             lastError = error.localizedDescription
         }
@@ -133,17 +141,29 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             let finalText = self.transcriber?.finalize() ?? ""
-            let textToInsert = self.textStateManager.flush(finalText: finalText)
-            let didInsert = textToInsert.isEmpty || self.textInjector.insert(text: textToInsert)
+
+            // flush returns only what hasn't been streamed yet
+            let remainingText = self.textStateManager.flush(finalText: finalText)
+
+            // For AX mode: end streaming session first (removes partial text),
+            // then insert whatever remains
+            if self.insertionMode == .accessibility {
+                self.textInjector.endStreamingSession()
+                if !remainingText.isEmpty {
+                    self.textInjector.insert(text: remainingText)
+                }
+            } else {
+                // For pasteboard mode: insert remaining text, then end session
+                if !remainingText.isEmpty {
+                    self.textInjector.insert(text: remainingText)
+                }
+                self.textInjector.endStreamingSession()
+            }
 
             DispatchQueue.main.async {
-                self.lastInsertedText = textToInsert
+                self.lastInsertedText = finalText
                 self.previewText = finalText
                 self.state = .idle
-
-                if !didInsert {
-                    self.lastError = "Text injection failed. Grant Accessibility access and try again."
-                }
             }
         }
     }
@@ -198,7 +218,21 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
         do {
             guard let result = try transcriber?.process(chunk) else { return }
-            _ = textStateManager.update(with: result)
+            let delta = textStateManager.update(with: result)
+
+            // Stream text into the focused app
+            if !streamingFailed {
+                let hasNewContent = !delta.newCommittedSuffix.isEmpty
+                    || delta.updatedPartial != delta.previousPartial
+                if hasNewContent {
+                    let ok = textInjector.streamInsert(delta: delta, mode: insertionMode)
+                    if !ok {
+                        streamingFailed = true
+                    }
+                }
+            }
+
+            // Update preview in menu bar popover
             let combinedPreview = [result.committedText, result.partialText]
                 .filter { !$0.isEmpty }
                 .joined(separator: result.committedText.isEmpty ? "" : " ")

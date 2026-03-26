@@ -1,34 +1,87 @@
 import Foundation
 
+struct StreamingTextDelta {
+    let newCommittedSuffix: String
+    let updatedPartial: String
+    let previousPartial: String
+}
+
 final class TextStateManager {
-    private var lastEmittedText = ""
+    private var lastEmittedCommitted = ""
+    private var lastEmittedPartial = ""
 
     func reset() {
-        lastEmittedText = ""
+        lastEmittedCommitted = ""
+        lastEmittedPartial = ""
     }
 
-    func update(with result: TranscriptionResult) -> String {
-        incrementalSuffix(for: result.committedText)
+    func update(with result: TranscriptionResult) -> StreamingTextDelta {
+        let committed = result.committedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let partial = result.partialText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var newCommittedSuffix: String
+        if committed.hasPrefix(lastEmittedCommitted) {
+            newCommittedSuffix = String(committed.dropFirst(lastEmittedCommitted.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if !committed.isEmpty {
+            newCommittedSuffix = committed
+        } else {
+            newCommittedSuffix = ""
+        }
+
+        // Ensure space between previously inserted text and new committed text
+        let hasExistingText = !lastEmittedCommitted.isEmpty || !lastEmittedPartial.isEmpty
+        if !newCommittedSuffix.isEmpty && hasExistingText {
+            newCommittedSuffix = " " + newCommittedSuffix
+        }
+
+        let previousPartial = lastEmittedPartial
+
+        // Ensure space before partial when there's committed text before it
+        let spacedPartial: String
+        if !partial.isEmpty && !committed.isEmpty {
+            spacedPartial = " " + partial
+        } else {
+            spacedPartial = partial
+        }
+
+        let spacedPreviousPartial: String
+        if !previousPartial.isEmpty && !lastEmittedCommitted.isEmpty {
+            spacedPreviousPartial = " " + previousPartial
+        } else {
+            spacedPreviousPartial = previousPartial
+        }
+
+        lastEmittedCommitted = committed
+        lastEmittedPartial = partial
+
+        return StreamingTextDelta(
+            newCommittedSuffix: newCommittedSuffix,
+            updatedPartial: spacedPartial,
+            previousPartial: spacedPreviousPartial
+        )
     }
 
     func flush(finalText: String) -> String {
         let normalized = finalText.trimmingCharacters(in: .whitespacesAndNewlines)
-        lastEmittedText = normalized
-        return normalized
-    }
 
-    private func incrementalSuffix(for candidate: String) -> String {
-        let normalized = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalized.isEmpty else { return "" }
-
-        if normalized.hasPrefix(lastEmittedText) {
-            let suffix = String(normalized.dropFirst(lastEmittedText.count))
+        // Return only what hasn't been inserted yet
+        let alreadyInserted = lastEmittedCommitted
+        var remaining: String
+        if normalized.hasPrefix(alreadyInserted) {
+            remaining = String(normalized.dropFirst(alreadyInserted.count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            lastEmittedText = normalized
-            return suffix
+        } else {
+            remaining = normalized
         }
 
-        lastEmittedText = normalized
-        return normalized
+        // Add leading space if there's already text in the field
+        if !remaining.isEmpty && !alreadyInserted.isEmpty {
+            remaining = " " + remaining
+        }
+
+        lastEmittedCommitted = normalized
+        lastEmittedPartial = ""
+        return remaining
     }
 }
