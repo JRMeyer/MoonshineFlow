@@ -38,15 +38,7 @@
 
 /* Begin PBXFileReference section */
 		5951911F2F105D28005425B3 /* models */ = {isa = PBXFileReference; lastKnownFileType = folder; name = models; path = MoonshineFlow/models; sourceTree = "<group>"; };
-		5971E57A2F4D26070061FDF9 /* AudioDeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDeviceManager.swift; sourceTree = "<group>"; };
-		59799BC32F2FE1E200AB8D28 /* SleepAssertion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAssertion.swift; sourceTree = "<group>"; };
-		598EE3422F4518E700BF39F9 /* MicrophonePCMSampleVendor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophonePCMSampleVendor.swift; sourceTree = "<group>"; };
-		598EE3442F451BF800BF39F9 /* MicrophonePCMSampleVendorError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophonePCMSampleVendorError.swift; sourceTree = "<group>"; };
-		59AEB5522F108578002E3525 /* TranscriptDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptDocument.swift; sourceTree = "<group>"; };
-		59AEB5542F108778002E3525 /* TranscriptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptView.swift; sourceTree = "<group>"; };
-		59C08E042F15CEBC00AC7EC1 /* ProvenanceTrackingTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvenanceTrackingTextView.swift; sourceTree = "<group>"; };
 		59C08E062F172A0900AC7EC1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		59C08E0F2F1ACCB100AC7EC1 /* AudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayer.swift; sourceTree = "<group>"; };
 		59C08E162F26A9DF00AC7EC1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D20000000000000000000001 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
 		D20000000000000000000002 /* ChunkBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChunkBuffer.swift; sourceTree = "<group>"; };
@@ -57,16 +49,12 @@
 		D20000000000000000000007 /* Transcriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcriber.swift; sourceTree = "<group>"; };
 		7C6C99F1D4B6E3EBA3A7B7DF /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		9AEEB9169F5D7FC75E6B35A2 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
-		C44093722816EC8800FB8386 /* Synth.aif */ = {isa = PBXFileReference; lastKnownFileType = file; path = Synth.aif; sourceTree = "<group>"; };
-		C470F0802811C5CB00D29309 /* ScreenRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRecorder.swift; sourceTree = "<group>"; };
-		C4AUDIO1C8BA4B50015082A /* AudioTranscriber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioTranscriber.swift; sourceTree = "<group>"; };
 		C4B0DAA7276BA4460015082A /* Moonshine Flow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Moonshine Flow.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4B0DAAE276BA4480015082A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ../MoonshineFlow/Assets.xcassets; sourceTree = "<group>"; };
 		C4B0DAB1276BA4480015082A /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C4B0DAB3276BA4480015082A /* MoonshineFlow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = MoonshineFlow.entitlements; path = ../MoonshineFlow/MoonshineFlow.entitlements; sourceTree = "<group>"; };
 		C4B0DAB9276BA4480015083A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = ../MoonshineFlow/Info.plist; sourceTree = "<group>"; };
 		C4B0DAB9276BA49F0015082A /* MoonshineFlowApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = MoonshineFlowApp.swift; path = ../MoonshineFlow/MoonshineFlowApp.swift; sourceTree = "<group>"; };
-		C4B0DABD276BA4B50015082A /* CaptureEngine.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CaptureEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,18 +82,8 @@
 			children = (
 				59C08E162F26A9DF00AC7EC1 /* SettingsView.swift */,
 				59C08E062F172A0900AC7EC1 /* ContentView.swift */,
-				59C08E042F15CEBC00AC7EC1 /* ProvenanceTrackingTextView.swift */,
-				59AEB5542F108778002E3525 /* TranscriptView.swift */,
 			);
 			path = Views;
-			sourceTree = "<group>";
-		};
-		C44093712816EC7800FB8386 /* Audio */ = {
-			isa = PBXGroup;
-			children = (
-				C44093722816EC8800FB8386 /* Synth.aif */,
-			);
-			path = Audio;
 			sourceTree = "<group>";
 		};
 		D30000000000000000000001 /* Dictation */ = {
@@ -144,19 +122,9 @@
 		C4B0DAA9276BA4460015082A /* MoonshineFlow */ = {
 			isa = PBXGroup;
 			children = (
-				5971E57A2F4D26070061FDF9 /* AudioDeviceManager.swift */,
-				59799BC32F2FE1E200AB8D28 /* SleepAssertion.swift */,
-				59C08E0F2F1ACCB100AC7EC1 /* AudioPlayer.swift */,
-				59AEB5522F108578002E3525 /* TranscriptDocument.swift */,
-				C470F0802811C5CB00D29309 /* ScreenRecorder.swift */,
-				C4B0DABD276BA4B50015082A /* CaptureEngine.swift */,
-				C4AUDIO1C8BA4B50015082A /* AudioTranscriber.swift */,
-				598EE3422F4518E700BF39F9 /* MicrophonePCMSampleVendor.swift */,
-				598EE3442F451BF800BF39F9 /* MicrophonePCMSampleVendorError.swift */,
 				D30000000000000000000001 /* Dictation */,
 				C41D1B1D2814BD230033613F /* Views */,
 				C4B0DAB9276BA49F0015082A /* MoonshineFlowApp.swift */,
-				C44093712816EC7800FB8386 /* Audio */,
 				C4B0DAAE276BA4480015082A /* Assets.xcassets */,
 				C4B0DAB3276BA4480015082A /* MoonshineFlow.entitlements */,
 				C4B0DAB9276BA4480015083A /* Info.plist */,
