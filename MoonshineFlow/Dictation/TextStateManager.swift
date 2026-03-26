@@ -12,7 +12,9 @@ final class TextStateManager {
     }
 
     func flush(finalText: String) -> String {
-        incrementalSuffix(for: finalText)
+        let normalized = finalText.trimmingCharacters(in: .whitespacesAndNewlines)
+        lastEmittedText = normalized
+        return normalized
     }
 
     private func incrementalSuffix(for candidate: String) -> String {

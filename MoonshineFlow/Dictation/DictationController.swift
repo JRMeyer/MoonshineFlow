@@ -39,7 +39,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private let processingQueue = DispatchQueue(label: "ai.moonshine.flow.dictation")
     private var transcriber: Transcriber?
 
-    init(modelURL: URL?, hotkey: HotkeyManager.Hotkey = .fn) {
+    init(modelURL: URL?, hotkey: HotkeyManager.Hotkey = .rightOption) {
         self.modelURL = modelURL
         self.hotkeyManager = HotkeyManager(hotkey: hotkey)
         self.hotkeyDescription = hotkey.displayName
@@ -63,6 +63,13 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
         refreshPermissions()
         hotkeyManager.start()
+
+        // Pre-initialize the transcriber so the first keypress isn't slow
+        if let modelURL, FileManager.default.fileExists(atPath: modelURL.path) {
+            processingQueue.async { [weak self] in
+                self?.transcriber = Transcriber(modelPath: modelURL.path)
+            }
+        }
     }
 
     deinit {

@@ -24,9 +24,30 @@ The folder layout must be:
 
 MoonshineFlow expects the Moonshine Swift package at `../moonshine/swift`.
 
-## 3. Patch Moonshine Dependency
+## 3. Download model files
 
-Download the current macOS Moonshine binary artifact:
+The model files are hosted on Moonshine's servers. Download them into the app's models directory:
+
+```bash
+MODEL_DIR=~/code/MoonshineFlow/MoonshineFlow/models/medium-streaming-en
+
+for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort frontend.ort streaming_config.json tokenizer.bin; do
+  curl -L "https://download.moonshine.ai/model/medium-streaming-en/quantized/$f" -o "$MODEL_DIR/$f"
+done
+```
+
+Verify the files are real (not Git LFS pointers):
+
+```bash
+ls -lh "$MODEL_DIR"/*.ort
+# encoder.ort should be ~90MB, decoder_kv.ort ~139MB
+```
+
+If any `.ort` file is under 1KB, it's an LFS pointer and needs to be re-downloaded.
+
+## 4. Patch Moonshine dependency
+
+Download the macOS Moonshine binary artifact:
 
 ```bash
 curl -L https://github.com/moonshine-ai/moonshine/releases/download/v0.0.51/moonshine-voice-macos.tar.gz \
@@ -102,88 +123,68 @@ let package = Package(
 )
 ```
 
-## 4. Verify Moonshine builds
+## 5. Build
+
+Build the Moonshine Swift package first:
 
 ```bash
 cd ~/code/moonshine/swift
 swift build
 ```
 
-This must succeed before touching the app.
+This must succeed before building the app.
 
-## 5. Build and run MoonshineFlow
+Then build MoonshineFlow:
 
 ```bash
 cd ~/code/MoonshineFlow
 swift build
+```
+
+## 6. Run
+
+```bash
 swift run
 ```
 
-### Using Xcode
+The app appears as a microphone icon in the menu bar.
 
-```bash
-open ~/code/MoonshineFlow/MoonshineFlow.xcodeproj
-```
+## 7. Grant permissions
 
-In Xcode:
+On first run, grant all three in **System Settings > Privacy & Security**:
 
-- Select the **Moonshine Flow** target
-- Let SwiftPM resolve the local package dependency
-- Build and run
+- **Microphone** -- required for audio capture
+- **Accessibility** -- required for text insertion into apps
+- **Input Monitoring** -- required for the global hotkey to work
 
-## 6. Permissions
+If running via `swift run`, the permissions attach to your terminal app (e.g. Ghostty, Terminal.app). If running as a `.app` bundle, permissions attach to that bundle's code signature.
 
-On first run, grant:
+## 8. First functional test
 
-- **Microphone**
-- **Accessibility**
+1. Open **TextEdit** and put cursor in a blank document
+2. Launch Moonshine Flow (menu bar icon appears)
+3. Hold **right Option** key
+4. Speak a short sentence
+5. Release **right Option**
+6. Confirm text inserts at the cursor
 
-If the hotkey does not fire, also grant:
-
-- **Input Monitoring**
-
-## 7. First Functional Test
-
-Validate in this order:
-
-1. Open TextEdit
-2. Put cursor in a blank document
-3. Launch Moonshine Flow
-4. Hold **fn**
-5. Speak a short sentence
-6. Release **fn**
-7. Confirm text inserts at the cursor
-
-Then test in: Notes, Slack, Chrome text field.
-
-## Current Behavior
-
-What works:
-
-- Menu bar app launches
-- Hold fn starts dictation; release fn finalizes
-- Final text inserts into the focused app
-- Accessibility insertion is attempted first; clipboard paste fallback if AX insert fails
-
-Not yet implemented:
-
-- Live incremental insertion while still holding the key
-- Rollback / cursor reconciliation for unstable partials
-- Hotkey remapping UI
+Then test in: Notes, Slack, a terminal (Ghostty, Terminal.app), Chrome text fields.
 
 ## Constraints
 
-- **macOS 15 or newer** — the vendored Moonshine binary targets macOS 15-era SDKs.
+- **macOS 15 or newer** -- the vendored Moonshine binary targets macOS 15-era SDKs.
+- **Xcode must be installed** -- Command Line Tools alone have a Swift toolchain mismatch. Run `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` to activate the Xcode toolchain.
 - Do not change the sibling folder layout unless you also update the dependency path in both `MoonshineFlow.xcodeproj/project.pbxproj` and `Package.swift`.
 
-## Key Files
+## Key files
 
 | File | Role |
 |------|------|
 | `MoonshineFlow/MoonshineFlowApp.swift` | App entry point |
 | `MoonshineFlow/Dictation/DictationController.swift` | Main controller |
-| `MoonshineFlow/Dictation/AudioEngine.swift` | Audio capture |
-| `MoonshineFlow/Dictation/ChunkBuffer.swift` | Chunking |
-| `MoonshineFlow/Dictation/Transcriber.swift` | Moonshine wrapper |
-| `MoonshineFlow/Dictation/TextInjector.swift` | Text injection |
-| `MoonshineFlow/Dictation/HotkeyManager.swift` | Hotkey handling |
+| `MoonshineFlow/Dictation/AudioEngine.swift` | Audio capture (16kHz mono) |
+| `MoonshineFlow/Dictation/ChunkBuffer.swift` | Audio chunking (0.6s windows) |
+| `MoonshineFlow/Dictation/Transcriber.swift` | Moonshine streaming wrapper |
+| `MoonshineFlow/Dictation/TextInjector.swift` | Text injection (AX + clipboard fallback) |
+| `MoonshineFlow/Dictation/HotkeyManager.swift` | Global hotkey via CGEvent tap |
+| `MoonshineFlow/Dictation/TextStateManager.swift` | Incremental text tracking |

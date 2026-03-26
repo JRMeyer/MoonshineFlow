@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5951911E2F105ADC005425B3 /* Moonshine in Frameworks */ = {isa = PBXBuildFile; productRef = 5951911D2F105ADC005425B3 /* Moonshine */; };
+
 		595191202F105D28005425B3 /* models in Resources */ = {isa = PBXBuildFile; fileRef = 5951911F2F105D28005425B3 /* models */; };
 		5971E57B2F4D26070061FDF9 /* AudioDeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5971E57A2F4D26070061FDF9 /* AudioDeviceManager.swift */; };
 		59799BC42F2FE1E200AB8D28 /* SleepAssertion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59799BC32F2FE1E200AB8D28 /* SleepAssertion.swift */; };
@@ -15,7 +15,7 @@
 		598EE3452F451BF800BF39F9 /* MicrophonePCMSampleVendorError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 598EE3442F451BF800BF39F9 /* MicrophonePCMSampleVendorError.swift */; };
 		59AEB5532F108578002E3525 /* TranscriptDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59AEB5522F108578002E3525 /* TranscriptDocument.swift */; };
 		59AEB5552F108778002E3525 /* TranscriptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59AEB5542F108778002E3525 /* TranscriptView.swift */; };
-		59AEB55A2F11C715002E3525 /* Moonshine in Frameworks */ = {isa = PBXBuildFile; productRef = 59AEB5592F11C715002E3525 /* Moonshine */; };
+		59AEB55A2F11C715002E3525 /* MoonshineVoice in Frameworks */ = {isa = PBXBuildFile; productRef = 59AEB5592F11C715002E3525 /* MoonshineVoice */; };
 		59C08E052F15CEBC00AC7EC1 /* ProvenanceTrackingTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C08E042F15CEBC00AC7EC1 /* ProvenanceTrackingTextView.swift */; };
 		59C08E072F172A0900AC7EC1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C08E062F172A0900AC7EC1 /* ContentView.swift */; };
 		59C08E102F1ACCB100AC7EC1 /* AudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59C08E0F2F1ACCB100AC7EC1 /* AudioPlayer.swift */; };
@@ -74,8 +74,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5951911E2F105ADC005425B3 /* Moonshine in Frameworks */,
-				59AEB55A2F11C715002E3525 /* Moonshine in Frameworks */,
+				59AEB55A2F11C715002E3525 /* MoonshineVoice in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -259,8 +258,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				59799BC42F2FE1E200AB8D28 /* SleepAssertion.swift in Sources */,
-				C4B0DAC0276BA4B50015082A /* CaptureEngine.swift in Sources */,
 				D10000000000000000000001 /* AudioEngine.swift in Sources */,
 				D10000000000000000000002 /* ChunkBuffer.swift in Sources */,
 				D10000000000000000000003 /* DictationController.swift in Sources */,
@@ -268,18 +265,9 @@
 				D10000000000000000000005 /* TextInjector.swift in Sources */,
 				D10000000000000000000006 /* TextStateManager.swift in Sources */,
 				D10000000000000000000007 /* Transcriber.swift in Sources */,
-				598EE3432F4518E700BF39F9 /* MicrophonePCMSampleVendor.swift in Sources */,
-				59AEB5552F108778002E3525 /* TranscriptView.swift in Sources */,
-				C4AUDIO2C8BA4B50015082A /* AudioTranscriber.swift in Sources */,
-				59C08E052F15CEBC00AC7EC1 /* ProvenanceTrackingTextView.swift in Sources */,
-				59AEB5532F108578002E3525 /* TranscriptDocument.swift in Sources */,
-				C470F0812811C5CB00D29309 /* ScreenRecorder.swift in Sources */,
 				C4B0DABA276BA49F0015082A /* MoonshineFlowApp.swift in Sources */,
 				59C08E072F172A0900AC7EC1 /* ContentView.swift in Sources */,
-				5971E57B2F4D26070061FDF9 /* AudioDeviceManager.swift in Sources */,
-				59C08E102F1ACCB100AC7EC1 /* AudioPlayer.swift in Sources */,
 				59C08E172F26A9DF00AC7EC1 /* SettingsView.swift in Sources */,
-				598EE3452F451BF800BF39F9 /* MicrophonePCMSampleVendorError.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -323,7 +311,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 77S96LNUM9;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -388,7 +376,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 77S96LNUM9;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -418,8 +406,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MoonshineFlow/MoonshineFlow.entitlements;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -454,8 +441,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MoonshineFlow/MoonshineFlow.entitlements;
-				CODE_SIGN_IDENTITY = "Mac Developer";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -511,25 +497,13 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		5951911C2F105ADC005425B3 /* XCRemoteSwiftPackageReference "moonshine-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/moonshine-ai/moonshine-swift.git";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		5951911D2F105ADC005425B3 /* Moonshine */ = {
+		59AEB5592F11C715002E3525 /* MoonshineVoice */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 5951911C2F105ADC005425B3 /* XCRemoteSwiftPackageReference "moonshine-swift" */;
-			productName = Moonshine;
-		};
-		59AEB5592F11C715002E3525 /* Moonshine */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = Moonshine;
+			package = 59AEB5582F11C715002E3525 /* XCLocalSwiftPackageReference "../moonshine/swift" */;
+			productName = MoonshineVoice;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

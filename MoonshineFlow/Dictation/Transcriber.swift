@@ -56,7 +56,7 @@ final class Transcriber {
         guard let moonshineTranscriber else { return }
 
         let stream = try moonshineTranscriber.createStream(updateInterval: updateInterval)
-        stream.addListener { [weak self] event in
+        try stream.addListener { [weak self] event in
             self?.handle(event)
         }
         try stream.start()

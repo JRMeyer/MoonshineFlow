@@ -11,7 +11,8 @@ struct ContentView: View {
             Label(controller.state.rawValue, systemImage: controller.menuBarIconName)
                 .font(.subheadline)
 
-            Text(controller.hotkeyDescription + " to dictate into the focused app.")
+            Text(controller.hotkeyDescription + " to dictate into the focused app."
+                + " Release to insert text.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -35,18 +36,6 @@ struct ContentView: View {
                 Text(controller.lastError)
                     .font(.caption)
                     .foregroundStyle(.red)
-            }
-
-            HStack {
-                Button(controller.state == .listening ? "Listening..." : "Start") {
-                    controller.startSession()
-                }
-                .disabled(controller.state != .idle)
-
-                Button("Stop") {
-                    controller.stopSession()
-                }
-                .disabled(controller.state != .listening)
             }
 
             Divider()

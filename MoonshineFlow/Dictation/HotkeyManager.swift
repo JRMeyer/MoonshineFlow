@@ -5,6 +5,7 @@ final class HotkeyManager {
     enum Hotkey {
         case fn
         case capsLock
+        case rightOption
 
         var keyCode: CGKeyCode {
             switch self {
@@ -12,6 +13,8 @@ final class HotkeyManager {
                 return 63
             case .capsLock:
                 return 57
+            case .rightOption:
+                return 61
             }
         }
 
@@ -21,6 +24,8 @@ final class HotkeyManager {
                 return "Hold fn"
             case .capsLock:
                 return "Hold Caps Lock"
+            case .rightOption:
+                return "Hold right ⌥"
             }
         }
     }
@@ -70,7 +75,6 @@ final class HotkeyManager {
             onInstallFailure?("Global hotkey registration failed. Enable Accessibility or Input Monitoring and relaunch.")
             return
         }
-
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         eventTap = tap
         runLoopSource = source
@@ -97,7 +101,15 @@ final class HotkeyManager {
     }
 
     private func handleEvent(type: CGEventType, event: CGEvent) {
-        guard event.getIntegerValueField(.keyboardEventKeycode) == Int64(hotkey.keyCode) else {
+        if type.rawValue == UInt32(CGEventType.tapDisabledByTimeout.rawValue) {
+            if let tap = eventTap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
+            return
+        }
+
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        guard keyCode == Int64(hotkey.keyCode) else {
             return
         }
 
@@ -124,6 +136,8 @@ final class HotkeyManager {
             return flags.contains(.maskSecondaryFn)
         case .capsLock:
             return flags.contains(.maskAlphaShift)
+        case .rightOption:
+            return flags.contains(.maskAlternate)
         }
     }
 }

@@ -18,11 +18,25 @@ final class TextInjector: @unchecked Sendable {
         let normalizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedText.isEmpty else { return true }
 
-        if insertViaAccessibility(normalizedText) {
+        if !isFocusedAppTerminal(), insertViaAccessibility(normalizedText) {
             return true
         }
 
         return insertViaPasteboard(normalizedText)
+    }
+
+    private func isFocusedAppTerminal() -> Bool {
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              let bundleId = app.bundleIdentifier else { return false }
+        let terminalBundleIds = [
+            "com.mitchellh.ghostty",
+            "com.apple.Terminal",
+            "com.googlecode.iterm2",
+            "net.kovidgoyal.kitty",
+            "co.zeit.hyper",
+            "com.github.wez.wezterm",
+        ]
+        return terminalBundleIds.contains(bundleId)
     }
 
     private func insertViaAccessibility(_ text: String) -> Bool {
@@ -66,13 +80,28 @@ final class TextInjector: @unchecked Sendable {
 
     private func insertViaPasteboard(_ text: String) -> Bool {
         let pasteboard = NSPasteboard.general
+
+        // Save existing clipboard content
+        let previousContents = pasteboard.string(forType: .string)
+
         pasteboard.clearContents()
         guard pasteboard.setString(text, forType: .string) else {
             return false
         }
 
+        // Small delay to ensure modifier keys from hotkey release are cleared
+        Thread.sleep(forTimeInterval: 0.1)
+
         guard simulateCommandV() else {
             return false
+        }
+
+        // Restore previous clipboard after a delay
+        if let previousContents {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.3) {
+                pasteboard.clearContents()
+                pasteboard.setString(previousContents, forType: .string)
+            }
         }
 
         return true
