@@ -15,22 +15,6 @@ struct ContentView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            if !controller.previewText.isEmpty {
-                GroupBox("Transcript Preview") {
-                    Text(controller.previewText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
-            }
-
-            if !controller.lastInsertedText.isEmpty {
-                GroupBox("Last Inserted") {
-                    Text(controller.lastInsertedText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
-            }
-
             if !controller.lastError.isEmpty {
                 Text(controller.lastError)
                     .font(.caption)
