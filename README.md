@@ -1,6 +1,6 @@
 # Moonshine Flow
 
-Moonshine Flow is a macOS menu-bar dictation app powered by [Moonshine](https://github.com/moonshine-ai/moonshine) for local, on-device speech recognition. Hold a key, speak, release -- your words appear in whatever app has focus.
+Moonshine Flow is a macOS menu-bar dictation app powered by [Moonshine](https://github.com/moonshine-ai/moonshine) for local, on-device speech recognition. Double-tap a key, speak, tap again to stop -- your words stream into whatever app has focus.
 
 All transcription runs locally. No audio leaves your machine.
 
@@ -8,10 +8,13 @@ All transcription runs locally. No audio leaves your machine.
 
 1. Launch the app -- a microphone icon appears in the menu bar
 2. Focus any text field (TextEdit, terminal, browser, Slack, etc.)
-3. Hold **right Option** key and speak
-4. Release the key -- transcribed text is inserted at the cursor
+3. **Double-tap right Option** to start dictation
+4. Speak -- text streams into the focused app in real time
+5. **Tap right Option** once to stop
 
-For standard text fields, text is inserted via the Accessibility API. For terminals (Ghostty, Terminal.app, iTerm2, kitty, etc.), the app falls back to clipboard paste (Cmd+V) since terminals don't support AX text insertion.
+An audio cue plays on start and stop so you know when dictation is active.
+
+For standard text fields (TextEdit, Notes, Slack, Chrome, etc.), text is inserted and updated live via the Accessibility API -- including partial text that refines as you speak. For terminals (Ghostty, Terminal.app, iTerm2, kitty, etc.), completed sentences stream in via clipboard paste since terminals don't support AX text insertion.
 
 ## Requirements
 
@@ -64,22 +67,24 @@ MoonshineFlow/
     AudioEngine.swift              Mic capture, resampled to 16kHz mono
     ChunkBuffer.swift              Splits audio into 0.6s chunks
     Transcriber.swift              Moonshine streaming transcription wrapper
-    TextStateManager.swift         Tracks incremental transcription state
+    TextStateManager.swift         Tracks streaming text deltas
     TextInjector.swift             Inserts text via AX or clipboard paste
 ```
 
 ## Current behavior
 
-- Hold right Option to start dictation; release to finalize
-- Final text inserts into the focused app
-- Accessibility insertion for standard apps; clipboard paste for terminals
-- Transcriber is pre-initialized at launch for fast first-press response
+- Double-tap right Option to start dictation; single tap to stop
+- Text streams into the focused app as you speak
+- AX-capable apps get live partial text that refines in place
+- Terminals get committed sentences streamed via clipboard paste
+- Audio cues on start (Blow) and stop (Bottle)
+- Transcriber is pre-initialized at launch for fast response
+- Clipboard is saved before dictation and restored after
 
 ## Not yet implemented
 
-- Live incremental insertion while still holding the key
-- Rollback / cursor reconciliation for unstable partials
 - Hotkey remapping UI
+- Configurable sound effects
 
 ## License
 
