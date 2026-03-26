@@ -11,8 +11,7 @@ struct ContentView: View {
             Label(controller.state.rawValue, systemImage: controller.menuBarIconName)
                 .font(.subheadline)
 
-            Text(controller.hotkeyDescription + " to dictate into the focused app."
-                + " Release to insert text.")
+            Text(controller.hotkeyDescription + " to start dictation. Tap once to stop.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

@@ -21,11 +21,11 @@ final class HotkeyManager {
         var displayName: String {
             switch self {
             case .fn:
-                return "Hold fn"
+                return "Double-tap fn"
             case .capsLock:
-                return "Hold Caps Lock"
+                return "Double-tap Caps Lock"
             case .rightOption:
-                return "Hold right ⌥"
+                return "Double-tap right ⌥"
             }
         }
     }
@@ -34,9 +34,12 @@ final class HotkeyManager {
     var onInstallFailure: ((String) -> Void)?
 
     private let hotkey: Hotkey
+    private let doubleTapInterval: TimeInterval = 0.4
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var isPressed = false
+    private var isKeyDown = false
+    private var isActive = false
+    private var lastReleaseTime: TimeInterval = 0
 
     init(hotkey: Hotkey = .fn) {
         self.hotkey = hotkey
@@ -97,7 +100,8 @@ final class HotkeyManager {
 
         runLoopSource = nil
         eventTap = nil
-        isPressed = false
+        isKeyDown = false
+        isActive = false
     }
 
     private func handleEvent(type: CGEventType, event: CGEvent) {
@@ -125,9 +129,25 @@ final class HotkeyManager {
             return
         }
 
-        guard pressed != isPressed else { return }
-        isPressed = pressed
-        onPressChanged?(pressed)
+        guard pressed != isKeyDown else { return }
+        isKeyDown = pressed
+
+        if !pressed {
+            // Key was released — check for double-tap or deactivation
+            let now = ProcessInfo.processInfo.systemUptime
+            let elapsed = now - lastReleaseTime
+            lastReleaseTime = now
+
+            if isActive {
+                // Currently dictating — single tap stops
+                isActive = false
+                onPressChanged?(false)
+            } else if elapsed < doubleTapInterval {
+                // Double-tap detected — start dictating
+                isActive = true
+                onPressChanged?(true)
+            }
+        }
     }
 
     private func isHotkeyPressed(flags: CGEventFlags) -> Bool {
