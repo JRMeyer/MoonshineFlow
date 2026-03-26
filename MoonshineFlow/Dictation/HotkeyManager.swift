@@ -3,16 +3,10 @@ import Foundation
 
 final class HotkeyManager {
     enum Hotkey {
-        case fn
-        case capsLock
         case rightOption
 
         var keyCode: CGKeyCode {
             switch self {
-            case .fn:
-                return 63
-            case .capsLock:
-                return 57
             case .rightOption:
                 return 61
             }
@@ -20,10 +14,6 @@ final class HotkeyManager {
 
         var displayName: String {
             switch self {
-            case .fn:
-                return "Double-tap fn"
-            case .capsLock:
-                return "Double-tap Caps Lock"
             case .rightOption:
                 return "Double-tap right ⌥"
             }
@@ -41,7 +31,7 @@ final class HotkeyManager {
     private var isActive = false
     private var lastReleaseTime: TimeInterval = 0
 
-    init(hotkey: Hotkey = .fn) {
+    init(hotkey: Hotkey = .rightOption) {
         self.hotkey = hotkey
     }
 
@@ -152,10 +142,6 @@ final class HotkeyManager {
 
     private func isHotkeyPressed(flags: CGEventFlags) -> Bool {
         switch hotkey {
-        case .fn:
-            return flags.contains(.maskSecondaryFn)
-        case .capsLock:
-            return flags.contains(.maskAlphaShift)
         case .rightOption:
             return flags.contains(.maskAlternate)
         }
