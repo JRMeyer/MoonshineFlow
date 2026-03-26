@@ -1,0 +1,9 @@
+.DS_Store
+xcshareddata
+xcuserdata
+*.xcuserstate
+*.dmg
+/.build/
+/build/
+.env
+/ExportOptions.plist
