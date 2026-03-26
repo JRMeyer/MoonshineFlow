@@ -6,7 +6,9 @@ All transcription runs locally. No audio leaves your machine.
 
 ## Demo
 
-<video src="./demo/moonshine-flow.mp4" controls preload="metadata" playsinline></video>
+![Moonshine Flow demo](./demo/moonshine-flow.gif)
+
+Full demo video: [moonshine-flow.mp4](./demo/moonshine-flow.mp4)
 
 ## How it works
 
