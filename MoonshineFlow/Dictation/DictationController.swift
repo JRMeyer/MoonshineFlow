@@ -40,6 +40,8 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private var transcriber: Transcriber?
     private var insertionMode: TextInjector.InsertionMode = .pasteboard
     private var streamingFailed = false
+    private let startSound = NSSound(named: "Blow")
+    private let stopSound = NSSound(named: "Bottle")
 
     init(modelURL: URL?, hotkey: HotkeyManager.Hotkey = .rightOption) {
         self.modelURL = modelURL
@@ -119,6 +121,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             textStateManager.reset()
             chunkBuffer.reset()
             state = .listening
+            startSound?.play()
             try audioEngine.start()
         } catch {
             textInjector.endStreamingSession()
@@ -161,6 +164,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             DispatchQueue.main.async {
+                self.stopSound?.play()
                 self.lastInsertedText = finalText
                 self.previewText = finalText
                 self.state = .idle

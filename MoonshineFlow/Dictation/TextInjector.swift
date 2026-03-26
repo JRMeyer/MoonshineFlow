@@ -36,11 +36,13 @@ final class TextInjector: @unchecked Sendable {
             removePartialText(from: element)
         }
 
-        // Restore clipboard
+        // Restore clipboard after a delay so any pending Cmd+V paste completes first
         if let saved = savedClipboard {
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(saved, forType: .string)
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(saved, forType: .string)
+            }
         }
 
         partialInsertionLength = 0
@@ -280,8 +282,10 @@ final class TextInjector: @unchecked Sendable {
 
     private func insertViaPasteboard(_ text: String) -> Bool {
         let pasteboard = NSPasteboard.general
+        let inSession = savedClipboard != nil
 
-        let previousContents = pasteboard.string(forType: .string)
+        // Only save clipboard if not in a streaming session (session manages its own save/restore)
+        let previousContents = inSession ? nil : pasteboard.string(forType: .string)
 
         pasteboard.clearContents()
         guard pasteboard.setString(text, forType: .string) else {
@@ -295,7 +299,7 @@ final class TextInjector: @unchecked Sendable {
         }
 
         if let previousContents {
-            DispatchQueue.global().asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
                 pasteboard.clearContents()
                 pasteboard.setString(previousContents, forType: .string)
             }
