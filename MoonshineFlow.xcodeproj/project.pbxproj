@@ -228,7 +228,7 @@
 			);
 			mainGroup = C4B0DA9E276BA4460015082A;
 			packageReferences = (
-				59AEB5582F11C715002E3525 /* XCLocalSwiftPackageReference "../moonshine/swift" */,
+				59AEB5582F11C715002E3525 /* XCRemoteSwiftPackageReference "moonshine-swift" */,
 			);
 			productRefGroup = C4B0DAA8276BA4460015082A /* Products */;
 			projectDirPath = "";
@@ -490,19 +490,23 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		59AEB5582F11C715002E3525 /* XCLocalSwiftPackageReference "../moonshine/swift" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../moonshine/swift;
-		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		59AEB5582F11C715002E3525 /* XCRemoteSwiftPackageReference "moonshine-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/moonshine-ai/moonshine-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.0.51;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		59AEB5592F11C715002E3525 /* MoonshineVoice */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 59AEB5582F11C715002E3525 /* XCLocalSwiftPackageReference "../moonshine/swift" */;
+			package = 59AEB5582F11C715002E3525 /* XCRemoteSwiftPackageReference "moonshine-swift" */;
 			productName = MoonshineVoice;
 		};
 /* End XCSwiftPackageProductDependency section */

@@ -18,30 +18,28 @@ For standard text fields (TextEdit, Notes, Slack, Chrome, etc.), text is inserte
 
 ## Requirements
 
-- macOS 15 or newer
+- macOS 15 or newer on Apple Silicon
 - Xcode (not just Command Line Tools)
 
 ## Quick start
 
 ```bash
-# Clone both repos side by side
-mkdir -p ~/code && cd ~/code
 git clone git@github.com:JRMeyer/MoonshineFlow.git
-git clone git@github.com:moonshine-ai/moonshine.git
+cd MoonshineFlow
 
-# Download model files (~290MB total)
-MODEL_DIR=~/code/MoonshineFlow/MoonshineFlow/models/medium-streaming-en
-for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort frontend.ort streaming_config.json tokenizer.bin; do
-  curl -L "https://download.moonshine.ai/model/medium-streaming-en/quantized/$f" -o "$MODEL_DIR/$f"
+# Download model files (~290MB)
+MODEL_DIR=MoonshineFlow/models/medium-streaming-en
+for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort \
+         frontend.ort streaming_config.json tokenizer.bin; do
+  curl -L "https://download.moonshine.ai/model/medium-streaming-en/quantized/$f" \
+    -o "$MODEL_DIR/$f"
 done
 
-# Patch the Moonshine Swift package (see SETUP.md for details)
-# Then build and run:
-cd ~/code/MoonshineFlow
+# Build and run (SPM fetches the Moonshine package automatically)
 swift build && swift run
 ```
 
-See [SETUP.md](SETUP.md) for the full step-by-step setup including patching the Moonshine dependency.
+See [SETUP.md](SETUP.md) for the full setup guide.
 
 ## Permissions
 
