@@ -33,11 +33,11 @@ If any `.ort` file is under 1KB, it's an LFS pointer and needs to be re-download
 
 ```bash
 cd ~/code/MoonshineFlow
-swift build
-swift run
+xcodebuild -scheme MoonshineFlow -configuration Release -derivedDataPath build build
+open build/Build/Products/Release/MoonshineFlow.app
 ```
 
-SPM will automatically fetch the [moonshine-swift](https://github.com/moonshine-ai/moonshine-swift) package and download the pre-built xcframework on first build.
+Xcode will automatically fetch the [moonshine-swift](https://github.com/moonshine-ai/moonshine-swift) package and download the pre-built xcframework on first build.
 
 ## 4. Grant permissions
 
@@ -47,7 +47,7 @@ On first run, grant all three in **System Settings > Privacy & Security**:
 - **Accessibility** -- required for text insertion into apps
 - **Input Monitoring** -- required for the global hotkey to work
 
-If running via `swift run`, the permissions attach to your terminal app (e.g. Ghostty, Terminal.app). If running as a `.app` bundle, permissions attach to that bundle's code signature.
+Permissions attach to the app bundle's code signature, so they persist across restarts.
 
 ## 5. First functional test
 

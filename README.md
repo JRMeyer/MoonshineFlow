@@ -41,8 +41,11 @@ for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort \
     -o "$MODEL_DIR/$f"
 done
 
-# Build and run (SPM fetches the Moonshine package automatically)
-swift build && swift run
+# Build (Xcode fetches the Moonshine package automatically)
+xcodebuild -scheme MoonshineFlow -configuration Release -derivedDataPath build build
+
+# Run
+open build/Build/Products/Release/MoonshineFlow.app
 ```
 
 See [SETUP.md](SETUP.md) for the full setup guide.
