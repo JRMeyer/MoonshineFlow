@@ -12,9 +12,9 @@ All transcription runs locally. No audio leaves your machine.
 4. Speak -- text streams into the focused app in real time
 5. **Tap right Option** once to stop
 
-An audio cue plays on start and stop so you know when dictation is active.
+For standard text fields (Slack, Chrome, WhatsApp, TextEdit, Notes, etc.), text is inserted and updated live via the Accessibility API -- including partial text that refines as you speak.
 
-For standard text fields (TextEdit, Notes, Slack, Chrome, etc.), text is inserted and updated live via the Accessibility API -- including partial text that refines as you speak. For terminals (Ghostty, Terminal.app, iTerm2, kitty, etc.), completed sentences stream in via clipboard paste since terminals don't support AX text insertion.
+For terminals (Ghostty, Terminal.app, iTerm2, kitty, etc.), completed sentences stream in via clipboard paste since terminals don't support AX text insertion.
 
 ## Requirements
 
@@ -75,14 +75,8 @@ MoonshineFlow/
 - Text streams into the focused app as you speak
 - AX-capable apps get live partial text that refines in place
 - Terminals get committed sentences streamed via clipboard paste
-- Audio cues on start (Blow) and stop (Bottle)
 - Transcriber is pre-initialized at launch for fast response
 - Clipboard is saved before dictation and restored after
-
-## Not yet implemented
-
-- Hotkey remapping UI
-- Configurable sound effects
 
 ## License
 
