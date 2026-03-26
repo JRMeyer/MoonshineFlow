@@ -4,6 +4,10 @@ Moonshine Flow is a macOS menu-bar dictation app powered by [Moonshine](https://
 
 All transcription runs locally. No audio leaves your machine.
 
+## Demo
+
+<video src="./demo/moonshine-flow.mp4" controls preload="metadata" playsinline></video>
+
 ## How it works
 
 1. Launch the app -- a microphone icon appears in the menu bar
