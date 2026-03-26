@@ -7,7 +7,7 @@ All transcription runs locally. No audio leaves your machine.
 ## Demo
 
 <p align="center">
-  <img src="./demo/moonshine-flow.gif" alt="Moonshine Flow demo" width="30%">
+  <img src="./demo/moonshine-flow.gif" alt="Moonshine Flow demo" width="50%">
 </p>
 
 ## How it works
