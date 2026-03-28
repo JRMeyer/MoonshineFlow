@@ -3,8 +3,24 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var controller: DictationController
 
+    private var missingPermissions: [(title: String, action: () -> Void)] {
+        var permissions: [(title: String, action: () -> Void)] = []
+
+        if !controller.inputMonitoringAuthorized {
+            permissions.append(("Hotkey", controller.openInputMonitoringSettings))
+        }
+        if !controller.accessibilityTrusted {
+            permissions.append(("Text Pasting", controller.requestAccessibilityPermission))
+        }
+        if !controller.microphoneAuthorized {
+            permissions.append(("Microphone", controller.requestMicrophonePermission))
+        }
+
+        return permissions
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Moonshine Flow")
                 .font(.headline)
 
@@ -21,27 +37,19 @@ struct ContentView: View {
                     .foregroundStyle(.red)
             }
 
-            Divider()
+            if !missingPermissions.isEmpty {
+                Divider()
 
-            VStack(alignment: .leading, spacing: 8) {
-                permissionRow(
-                    title: "Accessibility",
-                    granted: controller.accessibilityTrusted,
-                    actionTitle: "Grant"
-                ) {
-                    controller.requestAccessibilityPermission()
-                }
-
-                permissionRow(
-                    title: "Microphone",
-                    granted: controller.microphoneAuthorized,
-                    actionTitle: "Grant"
-                ) {
-                    controller.requestMicrophonePermission()
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(missingPermissions.enumerated()), id: \.offset) { _, permission in
+                        permissionRow(title: permission.title, actionTitle: "Grant") {
+                            permission.action()
+                        }
+                    }
                 }
             }
         }
-        .padding(14)
+        .padding(12)
         .onAppear {
             controller.refreshPermissions()
         }
@@ -49,18 +57,15 @@ struct ContentView: View {
 
     private func permissionRow(
         title: String,
-        granted: Bool,
         actionTitle: String,
         action: @escaping () -> Void
     ) -> some View {
         HStack {
             Text(title)
             Spacer()
-            Text(granted ? "Ready" : "Missing")
-                .foregroundStyle(granted ? .green : .orange)
-            if !granted {
-                Button(actionTitle, action: action)
-            }
+            Text("Missing")
+                .foregroundStyle(.orange)
+            Button(actionTitle, action: action)
         }
         .font(.caption)
     }

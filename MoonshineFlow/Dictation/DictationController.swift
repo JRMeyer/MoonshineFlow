@@ -1,13 +1,13 @@
 @preconcurrency import AVFoundation
 import AppKit
 import Combine
+import CoreGraphics
 import Foundation
 
 final class DictationController: ObservableObject, @unchecked Sendable {
     enum State: String {
         case idle = "Idle"
         case listening = "Listening"
-        case finalizing = "Finalizing"
     }
 
     @Published private(set) var state: State = .idle
@@ -16,18 +16,12 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     @Published private(set) var lastError = ""
     @Published private(set) var microphoneAuthorized = false
     @Published private(set) var accessibilityTrusted = false
+    @Published private(set) var inputMonitoringAuthorized = false
 
     let hotkeyDescription: String
 
     var menuBarIconName: String {
-        switch state {
-        case .idle:
-            return "mic"
-        case .listening:
-            return "waveform.badge.mic"
-        case .finalizing:
-            return "hourglass"
-        }
+        "moon.stars.fill"
     }
 
     private let modelURL: URL?
@@ -133,7 +127,6 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     func stopSession() {
         guard state == .listening else { return }
 
-        state = .finalizing
         audioEngine.stop()
 
         processingQueue.async { [weak self] in
@@ -192,6 +185,16 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         }
     }
 
+    func requestInputMonitoringPermission() {
+        inputMonitoringAuthorized = CGRequestListenEventAccess()
+        refreshPermissions()
+
+        // The system prompt and Settings change can lag slightly behind the request call.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.refreshPermissions()
+        }
+    }
+
     func openAccessibilitySettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
             return
@@ -206,9 +209,17 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         NSWorkspace.shared.open(url)
     }
 
+    func openInputMonitoringSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
     func refreshPermissions() {
         accessibilityTrusted = textInjector.isAccessibilityTrusted
         microphoneAuthorized = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        inputMonitoringAuthorized = CGPreflightListenEventAccess()
     }
 
     func handleAudioChunk(_ buffer: AVAudioPCMBuffer) {

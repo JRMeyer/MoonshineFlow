@@ -13,12 +13,12 @@ struct SettingsView: View {
 
             Section("Permissions") {
                 HStack {
-                    Text("Accessibility")
+                    Text("Hotkey")
                     Spacer()
-                    Text(controller.accessibilityTrusted ? "Granted" : "Missing")
-                    if !controller.accessibilityTrusted {
+                    Text(controller.inputMonitoringAuthorized ? "Granted" : "Missing")
+                    if !controller.inputMonitoringAuthorized {
                         Button("Open Settings") {
-                            controller.openAccessibilitySettings()
+                            controller.openInputMonitoringSettings()
                         }
                     }
                 }
@@ -30,6 +30,17 @@ struct SettingsView: View {
                     if !controller.microphoneAuthorized {
                         Button("Open Settings") {
                             controller.openMicrophoneSettings()
+                        }
+                    }
+                }
+
+                HStack {
+                    Text("Text Pasting")
+                    Spacer()
+                    Text(controller.accessibilityTrusted ? "Granted" : "Missing")
+                    if !controller.accessibilityTrusted {
+                        Button("Open Settings") {
+                            controller.openAccessibilitySettings()
                         }
                     }
                 }

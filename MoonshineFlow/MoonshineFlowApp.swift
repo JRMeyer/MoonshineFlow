@@ -12,7 +12,7 @@ struct MoonshineFlowApp: App {
     var body: some Scene {
         MenuBarExtra("Moonshine Flow", systemImage: controller.menuBarIconName) {
             ContentView(controller: controller)
-                .frame(width: 360)
+                .frame(width: 270)
         }
         .menuBarExtraStyle(.window)
 
