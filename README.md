@@ -1,17 +1,17 @@
-# Moonshine Flow
+# MoonshineFlow
 
 <p align="center">
-  <img src="./demo/readme-icon.png" alt="Moonshine Flow icon" width="144">
+  <img src="./demo/readme-icon.png" alt="MoonshineFlow icon" width="144">
 </p>
 
-Moonshine Flow is a macOS menu-bar dictation app powered by [Moonshine](https://github.com/moonshine-ai/moonshine) for local, on-device speech recognition. Double-tap a key, speak, tap again to stop -- your words stream into whatever app has focus.
+MoonshineFlow is a macOS menu-bar dictation app powered by [Moonshine](https://github.com/moonshine-ai/moonshine) for local, on-device speech recognition. Double-tap a key, speak, tap again to stop -- your words stream into whatever app has focus.
 
 All transcription runs locally. No audio leaves your machine.
 
 ## Demo
 
 <p align="center">
-  <img src="./demo/moonshine-flow.gif" alt="Moonshine Flow demo" width="50%">
+  <img src="./demo/moonshine-flow.gif" alt="MoonshineFlow demo" width="50%">
 </p>
 
 ## How it works

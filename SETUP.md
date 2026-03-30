@@ -52,7 +52,7 @@ Permissions attach to the app bundle's code signature, so they persist across re
 ## 5. First functional test
 
 1. Open **TextEdit** and put cursor in a blank document
-2. Launch Moonshine Flow (menu bar icon appears)
+2. Launch MoonshineFlow (menu bar icon appears)
 3. **Double-tap right Option** to start dictation
 4. Speak a short sentence
 5. **Tap right Option** once to stop

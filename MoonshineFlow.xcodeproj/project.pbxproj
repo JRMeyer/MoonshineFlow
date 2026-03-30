@@ -49,7 +49,7 @@
 		D20000000000000000000007 /* Transcriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcriber.swift; sourceTree = "<group>"; };
 		7C6C99F1D4B6E3EBA3A7B7DF /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		9AEEB9169F5D7FC75E6B35A2 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
-		C4B0DAA7276BA4460015082A /* Moonshine Flow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Moonshine Flow.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C4B0DAA7276BA4460015082A /* MoonshineFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoonshineFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4B0DAAE276BA4480015082A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = ../MoonshineFlow/Assets.xcassets; sourceTree = "<group>"; };
 		C4B0DAB1276BA4480015082A /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C4B0DAB3276BA4480015082A /* MoonshineFlow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = MoonshineFlow.entitlements; path = ../MoonshineFlow/MoonshineFlow.entitlements; sourceTree = "<group>"; };
@@ -114,7 +114,7 @@
 		C4B0DAA8276BA4460015082A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C4B0DAA7276BA4460015082A /* Moonshine Flow.app */,
+				C4B0DAA7276BA4460015082A /* MoonshineFlow.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -152,9 +152,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C4B0DAA6276BA4460015082A /* Moonshine Flow */ = {
+		C4B0DAA6276BA4460015082A /* MoonshineFlow */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C4B0DAB6276BA4480015082A /* Build configuration list for PBXNativeTarget "Moonshine Flow" */;
+			buildConfigurationList = C4B0DAB6276BA4480015082A /* Build configuration list for PBXNativeTarget "MoonshineFlow" */;
 			buildPhases = (
 				C4B0DAA3276BA4460015082A /* Sources */,
 				C4B0DAA4276BA4460015082A /* Frameworks */,
@@ -164,9 +164,9 @@
 			);
 			dependencies = (
 			);
-			name = "Moonshine Flow";
+			name = MoonshineFlow;
 			productName = MoonshineFlow;
-			productReference = C4B0DAA7276BA4460015082A /* Moonshine Flow.app */;
+			productReference = C4B0DAA7276BA4460015082A /* MoonshineFlow.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -202,7 +202,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C4B0DAA6276BA4460015082A /* Moonshine Flow */,
+				C4B0DAA6276BA4460015082A /* MoonshineFlow */,
 			);
 		};
 /* End PBXProject section */
@@ -446,7 +446,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C4B0DAB6276BA4480015082A /* Build configuration list for PBXNativeTarget "Moonshine Flow" */ = {
+		C4B0DAB6276BA4480015082A /* Build configuration list for PBXNativeTarget "MoonshineFlow" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C4B0DAB7276BA4480015082A /* Debug */,

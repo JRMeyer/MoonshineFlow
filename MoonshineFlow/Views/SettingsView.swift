@@ -47,7 +47,7 @@ struct SettingsView: View {
             }
 
             Section("Notes") {
-                Text("Moonshine Flow transcribes locally with Moonshine and inserts text into the focused app.")
+                Text("MoonshineFlow transcribes locally with Moonshine and inserts text into the focused app.")
                 Text("If direct Accessibility insertion fails for a target app, the injector falls back to clipboard paste.")
             }
         }
