@@ -256,7 +256,7 @@ final class TextInjector: @unchecked Sendable {
         return insertViaPasteboard(normalizedText)
     }
 
-    func isFocusedAppTerminal() -> Bool {
+    private func isFocusedAppTerminal() -> Bool {
         guard let app = NSWorkspace.shared.frontmostApplication,
               let bundleId = app.bundleIdentifier else { return false }
         let terminalBundleIds = [

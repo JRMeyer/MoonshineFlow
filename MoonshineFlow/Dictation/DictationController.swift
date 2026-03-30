@@ -12,7 +12,6 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
     @Published private(set) var state: State = .idle
     @Published private(set) var previewText = ""
-    @Published private(set) var lastInsertedText = ""
     @Published private(set) var lastError = ""
     @Published private(set) var microphoneAuthorized = false
     @Published private(set) var accessibilityTrusted = false
@@ -158,7 +157,6 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
             DispatchQueue.main.async {
                 self.stopSound?.play()
-                self.lastInsertedText = finalText
                 self.previewText = finalText
                 self.state = .idle
             }
@@ -182,16 +180,6 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
         default:
             microphoneAuthorized = false
-        }
-    }
-
-    func requestInputMonitoringPermission() {
-        inputMonitoringAuthorized = CGRequestListenEventAccess()
-        refreshPermissions()
-
-        // The system prompt and Settings change can lag slightly behind the request call.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.refreshPermissions()
         }
     }
 
@@ -222,7 +210,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         inputMonitoringAuthorized = CGPreflightListenEventAccess()
     }
 
-    func handleAudioChunk(_ buffer: AVAudioPCMBuffer) {
+    private func handleAudioChunk(_ buffer: AVAudioPCMBuffer) {
         processingQueue.async { [weak self] in
             self?.chunkBuffer.append(buffer)
         }
