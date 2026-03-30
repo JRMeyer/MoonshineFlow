@@ -112,8 +112,8 @@ final class Transcriber {
         case is LineCompleted:
             state.text = normalizedText
             state.isComplete = true
-        case is TranscriptError:
-            break
+        case let transcriptError as TranscriptError:
+            NSLog("MoonshineFlow: transcript error on line %llu: %@", line.lineId, transcriptError.error.localizedDescription)
         default:
             break
         }
