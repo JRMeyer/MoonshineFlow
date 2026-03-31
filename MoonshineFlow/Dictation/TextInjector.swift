@@ -103,12 +103,12 @@ final class TextInjector: @unchecked Sendable {
         guard replaceLocation >= 0, replaceLocation + partialInsertionLength <= nsValue.length else {
             // Fallback: just append
             partialInsertionLength = 0
-            return appendViaAccessibility(delta.newCommittedSuffix + " " + delta.updatedPartial, element: element)
+            return appendViaAccessibility(delta.newCommittedSuffix + delta.updatedPartial, element: element)
         }
 
         let replaceRange = NSRange(location: replaceLocation, length: partialInsertionLength)
 
-        // Build the replacement text: new committed suffix + space + updated partial
+        // Streaming deltas already include any required separators.
         var parts: [String] = []
         if !delta.newCommittedSuffix.isEmpty {
             parts.append(delta.newCommittedSuffix)
@@ -117,12 +117,9 @@ final class TextInjector: @unchecked Sendable {
             parts.append(delta.updatedPartial)
         }
 
-        // If we had previous partial but there's also new committed text,
-        // we need a leading space before committed text
         let insertText: String
-        if !delta.newCommittedSuffix.isEmpty && partialInsertionLength > 0 {
-            // Previous partial gets replaced by: committed + partial
-            insertText = parts.joined(separator: " ")
+        if !parts.isEmpty {
+            insertText = parts.joined()
         } else if !delta.updatedPartial.isEmpty {
             insertText = delta.updatedPartial
         } else if !delta.newCommittedSuffix.isEmpty {
@@ -160,8 +157,7 @@ final class TextInjector: @unchecked Sendable {
     }
 
     private func appendViaAccessibility(_ text: String, element: AXUIElement) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return true }
+        guard containsVisibleContent(text) else { return true }
 
         guard
             let currentValue = copyStringAttribute(kAXValueAttribute, from: element),
@@ -176,7 +172,7 @@ final class TextInjector: @unchecked Sendable {
             return false
         }
 
-        let updatedValue = nsValue.replacingCharacters(in: selectedRange, with: trimmed)
+        let updatedValue = nsValue.replacingCharacters(in: selectedRange, with: text)
         let setResult = AXUIElementSetAttributeValue(
             element,
             kAXValueAttribute as CFString,
@@ -184,7 +180,7 @@ final class TextInjector: @unchecked Sendable {
         )
         guard setResult == .success else { return false }
 
-        let newCursor = selectedRange.location + (trimmed as NSString).length
+        let newCursor = selectedRange.location + (text as NSString).length
         var newRange = CFRange(location: newCursor, length: 0)
         if let rangeValue = AXValueCreate(.cfRange, &newRange) {
             _ = AXUIElementSetAttributeValue(
@@ -246,14 +242,13 @@ final class TextInjector: @unchecked Sendable {
 
     @discardableResult
     func insert(text: String) -> Bool {
-        let normalizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalizedText.isEmpty else { return true }
+        guard containsVisibleContent(text) else { return true }
 
-        if !isFocusedAppTerminal(), insertViaAccessibility(normalizedText) {
+        if !isFocusedAppTerminal(), insertViaAccessibility(text) {
             return true
         }
 
-        return insertViaPasteboard(normalizedText)
+        return insertViaPasteboard(text)
     }
 
     private func isFocusedAppTerminal() -> Bool {
@@ -373,5 +368,9 @@ final class TextInjector: @unchecked Sendable {
         }
 
         return NSRange(location: selectedRange.location, length: selectedRange.length)
+    }
+
+    private func containsVisibleContent(_ text: String) -> Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }

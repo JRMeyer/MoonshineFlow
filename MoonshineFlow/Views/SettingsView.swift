@@ -9,6 +9,11 @@ struct SettingsView: View {
                 LabeledContent("Hotkey", value: controller.hotkeyDescription)
                 LabeledContent("Mode", value: "Hold to dictate, insert on release")
                 LabeledContent("Model", value: "medium-streaming-en")
+                Picker("Speaker Output", selection: $controller.outputMode) {
+                    ForEach(DictationOutputMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
             }
 
             Section("Permissions") {

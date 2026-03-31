@@ -11,6 +11,8 @@ final class Transcriber {
         var order: Int
         var text: String
         var isComplete: Bool
+        var hasSpeakerId: Bool
+        var speakerIndex: UInt32
     }
 
     private let modelPath: String
@@ -63,18 +65,18 @@ final class Transcriber {
         self.stream = stream
     }
 
-    func process(_ chunk: AudioChunk) throws -> TranscriptionResult {
+    func process(_ chunk: AudioChunk, outputMode: DictationOutputMode) throws -> TranscriptionResult {
         guard let stream else { return TranscriptionResult(committedText: "", partialText: "") }
         try stream.addAudio(chunk.samples, sampleRate: chunk.sampleRate)
-        return snapshot()
+        return snapshot(outputMode: outputMode)
     }
 
-    func finalize() -> String {
+    func finalize(outputMode: DictationOutputMode) -> String {
         if let stream {
             try? stream.stop()
         }
 
-        let finalText = snapshot(includeIncomplete: true).committedText
+        let finalText = snapshot(includeIncomplete: true, outputMode: outputMode).committedText
         closeStream()
         return finalText
     }
@@ -97,10 +99,19 @@ final class Transcriber {
         lock.lock()
         defer { lock.unlock() }
 
-        var state = lines[line.lineId] ?? LineState(order: nextOrder, text: "", isComplete: false)
+        var state = lines[line.lineId] ?? LineState(
+            order: nextOrder,
+            text: "",
+            isComplete: false,
+            hasSpeakerId: false,
+            speakerIndex: 0
+        )
         if lines[line.lineId] == nil {
             nextOrder += 1
         }
+
+        state.hasSpeakerId = line.hasSpeakerId
+        state.speakerIndex = line.speakerIndex
 
         switch event {
         case is LineStarted:
@@ -121,26 +132,63 @@ final class Transcriber {
         lines[line.lineId] = state
     }
 
-    private func snapshot(includeIncomplete: Bool = false) -> TranscriptionResult {
+    private func snapshot(
+        includeIncomplete: Bool = false,
+        outputMode: DictationOutputMode
+    ) -> TranscriptionResult {
         lock.lock()
         defer { lock.unlock() }
 
         let orderedLines = lines.values.sorted { $0.order < $1.order }
-        let committed = orderedLines
-            .filter { includeIncomplete || $0.isComplete }
-            .map(\.text)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-
-        let partial = orderedLines
-            .filter { !$0.isComplete }
-            .map(\.text)
-            .last ?? ""
+        let committedLines = orderedLines.filter { includeIncomplete || $0.isComplete }
+        let committed = format(lines: committedLines, outputMode: outputMode)
+        let partial: String
+        if includeIncomplete {
+            partial = ""
+        } else {
+            let fullText = format(lines: orderedLines, outputMode: outputMode)
+            if fullText.hasPrefix(committed) {
+                partial = String(fullText.dropFirst(committed.count))
+            } else {
+                partial = fullText
+            }
+        }
 
         return TranscriptionResult(
             committedText: committed,
-            partialText: includeIncomplete ? "" : partial
+            partialText: partial
         )
+    }
+
+    private func format(lines: [LineState], outputMode: DictationOutputMode) -> String {
+        let orderedNonEmptyLines = lines.filter { !$0.text.isEmpty }
+        switch outputMode {
+        case .singleSpeaker:
+            return orderedNonEmptyLines.map(\.text).joined(separator: " ")
+        case .multiSpeaker:
+            var formatted = ""
+            var previousSpeakerIndex: UInt32?
+
+            for line in orderedNonEmptyLines {
+                let needsSpeakerHeader = line.hasSpeakerId && previousSpeakerIndex != line.speakerIndex
+
+                if !formatted.isEmpty {
+                    formatted += needsSpeakerHeader ? "\n\n" : " "
+                }
+
+                if needsSpeakerHeader {
+                    formatted += "Speaker \(line.speakerIndex + 1):\n"
+                }
+
+                formatted += line.text
+
+                if line.hasSpeakerId {
+                    previousSpeakerIndex = line.speakerIndex
+                }
+            }
+
+            return formatted
+        }
     }
 
     private func normalize(_ text: String) -> String {
