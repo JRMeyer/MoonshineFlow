@@ -4,11 +4,29 @@ import Combine
 import CoreGraphics
 import Foundation
 
+enum DictationOutputMode: String, CaseIterable, Identifiable {
+    case singleSpeaker
+    case multiSpeaker
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .singleSpeaker:
+            return "Single"
+        case .multiSpeaker:
+            return "Multi"
+        }
+    }
+}
+
 final class DictationController: ObservableObject, @unchecked Sendable {
     enum State: String {
         case idle = "Idle"
         case listening = "Listening"
     }
+
+    private static let outputModeDefaultsKey = "dictationOutputMode"
 
     @Published private(set) var state: State = .idle
     @Published private(set) var previewText = ""
@@ -16,6 +34,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     @Published private(set) var microphoneAuthorized = false
     @Published private(set) var accessibilityTrusted = false
     @Published private(set) var inputMonitoringAuthorized = false
+    @Published var outputMode: DictationOutputMode {
+        didSet {
+            UserDefaults.standard.set(outputMode.rawValue, forKey: Self.outputModeDefaultsKey)
+        }
+    }
 
     let hotkeyDescription: String
 
@@ -33,6 +56,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private var transcriber: Transcriber?
     private var insertionMode: TextInjector.InsertionMode = .pasteboard
     private var streamingFailed = false
+    private var sessionOutputMode: DictationOutputMode
     private let startSound = NSSound(named: "Blow")
     private let stopSound = NSSound(named: "Bottle")
 
@@ -40,6 +64,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         self.modelURL = modelURL
         self.hotkeyManager = HotkeyManager(hotkey: hotkey)
         self.hotkeyDescription = hotkey.displayName
+        let savedOutputMode = UserDefaults.standard.string(forKey: Self.outputModeDefaultsKey)
+        let initialOutputMode = DictationOutputMode(rawValue: savedOutputMode ?? "")
+            ?? .singleSpeaker
+        self.outputMode = initialOutputMode
+        self.sessionOutputMode = initialOutputMode
 
         audioEngine.onBuffer = { [weak self] buffer in
             self?.handleAudioChunk(buffer)
@@ -94,6 +123,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         lastError = ""
         previewText = ""
         streamingFailed = false
+        sessionOutputMode = outputMode
 
         do {
             try ensureMicrophonePermission()
@@ -135,7 +165,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                 self.processChunkSynchronously(finalChunk)
             }
 
-            let finalText = self.transcriber?.finalize() ?? ""
+            let finalText = self.transcriber?.finalize(outputMode: self.sessionOutputMode) ?? ""
 
             // flush returns only what hasn't been streamed yet
             let remainingText = self.textStateManager.flush(finalText: finalText)
@@ -220,7 +250,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         guard state != .idle else { return }
 
         do {
-            guard let result = try transcriber?.process(chunk) else { return }
+            guard let result = try transcriber?.process(chunk, outputMode: sessionOutputMode) else { return }
             let delta = textStateManager.update(with: result)
 
             // Stream text into the focused app
@@ -236,9 +266,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             // Update preview in menu bar popover
-            let combinedPreview = [result.committedText, result.partialText]
-                .filter { !$0.isEmpty }
-                .joined(separator: result.committedText.isEmpty ? "" : " ")
+            let combinedPreview = result.committedText + result.partialText
 
             DispatchQueue.main.async { [weak self] in
                 self?.previewText = combinedPreview

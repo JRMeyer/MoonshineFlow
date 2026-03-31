@@ -103,7 +103,7 @@ final class TextInjector: @unchecked Sendable {
         guard replaceLocation >= 0, replaceLocation + partialInsertionLength <= nsValue.length else {
             // Fallback: just append
             partialInsertionLength = 0
-            return appendViaAccessibility(delta.newCommittedSuffix + " " + delta.updatedPartial, element: element)
+            return appendViaAccessibility(delta.newCommittedSuffix + delta.updatedPartial, element: element)
         }
 
         let replaceRange = NSRange(location: replaceLocation, length: partialInsertionLength)
@@ -117,12 +117,9 @@ final class TextInjector: @unchecked Sendable {
             parts.append(delta.updatedPartial)
         }
 
-        // If we had previous partial but there's also new committed text,
-        // we need a leading space before committed text
         let insertText: String
-        if !delta.newCommittedSuffix.isEmpty && partialInsertionLength > 0 {
-            // Previous partial gets replaced by: committed + partial
-            insertText = parts.joined(separator: " ")
+        if !parts.isEmpty {
+            insertText = parts.joined()
         } else if !delta.updatedPartial.isEmpty {
             insertText = delta.updatedPartial
         } else if !delta.newCommittedSuffix.isEmpty {

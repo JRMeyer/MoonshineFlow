@@ -3,6 +3,15 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var controller: DictationController
 
+    private var stateTint: Color {
+        switch controller.state {
+        case .idle:
+            return .secondary
+        case .listening:
+            return .red
+        }
+    }
+
     private var missingPermissions: [(title: String, action: () -> Void)] {
         var permissions: [(title: String, action: () -> Void)] = []
 
@@ -20,39 +29,102 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("MoonshineFlow")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("MoonshineFlow")
+                        .font(.title3.weight(.semibold))
 
-            Label(controller.state.rawValue, systemImage: controller.menuBarIconName)
-                .font(.subheadline)
+                    Text("Local dictation in the focused app")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-            Text(controller.hotkeyDescription + " to start dictation. Tap once to stop.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+
+                statusBadge
+            }
+
+            infoCard(
+                title: controller.state == .listening ? "Listening now" : "Ready",
+                message: controller.hotkeyDescription + " starts dictation. Tap once to stop.",
+                systemImage: controller.menuBarIconName
+            )
+
+            Picker("Speaker Output", selection: $controller.outputMode) {
+                Text("Single Speaker").tag(DictationOutputMode.singleSpeaker)
+                Text("Multi Speaker").tag(DictationOutputMode.multiSpeaker)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .disabled(controller.state == .listening)
+            .padding(12)
+            .background(panelBackground)
 
             if !controller.lastError.isEmpty {
-                Text(controller.lastError)
+                Label(controller.lastError, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(.red)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(panelBackground)
             }
 
             if !missingPermissions.isEmpty {
-                Divider()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Permissions")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
 
-                VStack(alignment: .leading, spacing: 8) {
                     ForEach(Array(missingPermissions.enumerated()), id: \.offset) { _, permission in
-                        permissionRow(title: permission.title, actionTitle: "Grant") {
+                        permissionRow(title: permission.title, actionTitle: "Grant access") {
                             permission.action()
                         }
                     }
                 }
+                .padding(12)
+                .background(panelBackground)
             }
         }
-        .padding(12)
+        .padding(14)
         .onAppear {
             controller.refreshPermissions()
         }
+    }
+
+    private var statusBadge: some View {
+        Label(controller.state.rawValue, systemImage: controller.menuBarIconName)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(stateTint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(stateTint.opacity(0.14), in: Capsule())
+    }
+
+    private var panelBackground: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(.quaternary.opacity(0.45))
+    }
+
+    private func infoCard(title: String, message: String, systemImage: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.title3)
+                .foregroundStyle(stateTint)
+                .frame(width: 28, height: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(panelBackground)
     }
 
     private func permissionRow(
@@ -61,12 +133,22 @@ struct ContentView: View {
         action: @escaping () -> Void
     ) -> some View {
         HStack {
-            Text(title)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text("Required")
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption)
+
             Spacer()
+
             Text("Missing")
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(.orange)
+
             Button(actionTitle, action: action)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
         }
-        .font(.caption)
     }
 }
