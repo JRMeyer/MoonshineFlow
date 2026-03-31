@@ -108,7 +108,7 @@ final class TextInjector: @unchecked Sendable {
 
         let replaceRange = NSRange(location: replaceLocation, length: partialInsertionLength)
 
-        // Build the replacement text: new committed suffix + space + updated partial
+        // Streaming deltas already include any required separators.
         var parts: [String] = []
         if !delta.newCommittedSuffix.isEmpty {
             parts.append(delta.newCommittedSuffix)
@@ -157,8 +157,7 @@ final class TextInjector: @unchecked Sendable {
     }
 
     private func appendViaAccessibility(_ text: String, element: AXUIElement) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return true }
+        guard containsVisibleContent(text) else { return true }
 
         guard
             let currentValue = copyStringAttribute(kAXValueAttribute, from: element),
@@ -173,7 +172,7 @@ final class TextInjector: @unchecked Sendable {
             return false
         }
 
-        let updatedValue = nsValue.replacingCharacters(in: selectedRange, with: trimmed)
+        let updatedValue = nsValue.replacingCharacters(in: selectedRange, with: text)
         let setResult = AXUIElementSetAttributeValue(
             element,
             kAXValueAttribute as CFString,
@@ -181,7 +180,7 @@ final class TextInjector: @unchecked Sendable {
         )
         guard setResult == .success else { return false }
 
-        let newCursor = selectedRange.location + (trimmed as NSString).length
+        let newCursor = selectedRange.location + (text as NSString).length
         var newRange = CFRange(location: newCursor, length: 0)
         if let rangeValue = AXValueCreate(.cfRange, &newRange) {
             _ = AXUIElementSetAttributeValue(
@@ -243,14 +242,13 @@ final class TextInjector: @unchecked Sendable {
 
     @discardableResult
     func insert(text: String) -> Bool {
-        let normalizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalizedText.isEmpty else { return true }
+        guard containsVisibleContent(text) else { return true }
 
-        if !isFocusedAppTerminal(), insertViaAccessibility(normalizedText) {
+        if !isFocusedAppTerminal(), insertViaAccessibility(text) {
             return true
         }
 
-        return insertViaPasteboard(normalizedText)
+        return insertViaPasteboard(text)
     }
 
     private func isFocusedAppTerminal() -> Bool {
@@ -370,5 +368,9 @@ final class TextInjector: @unchecked Sendable {
         }
 
         return NSRange(location: selectedRange.location, length: selectedRange.length)
+    }
+
+    private func containsVisibleContent(_ text: String) -> Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
