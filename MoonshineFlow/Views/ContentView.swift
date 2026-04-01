@@ -64,6 +64,16 @@ struct ContentView: View {
             .padding(12)
             .background(panelBackground)
 
+            Picker("Capitalization", selection: $controller.capitalizationMode) {
+                Text("Standard").tag(DictationCapitalizationMode.standard)
+                Text("Lowercase").tag(DictationCapitalizationMode.lowercase)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .disabled(controller.state == .listening)
+            .padding(12)
+            .background(panelBackground)
+
             if !controller.lastError.isEmpty {
                 Label(controller.lastError, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)

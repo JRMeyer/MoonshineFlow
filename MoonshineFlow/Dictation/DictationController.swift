@@ -20,6 +20,22 @@ enum DictationOutputMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum DictationCapitalizationMode: String, CaseIterable, Identifiable {
+    case standard
+    case lowercase
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .standard:
+            return "Standard"
+        case .lowercase:
+            return "Lowercase"
+        }
+    }
+}
+
 enum SystemAudioAccessState {
     case unknown
     case available
@@ -44,6 +60,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     }
 
     private static let outputModeDefaultsKey = "dictationOutputMode"
+    private static let capitalizationModeDefaultsKey = "dictationCapitalizationMode"
 
     @Published private(set) var state: State = .idle
     @Published private(set) var previewText = ""
@@ -55,6 +72,14 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     @Published var outputMode: DictationOutputMode {
         didSet {
             UserDefaults.standard.set(outputMode.rawValue, forKey: Self.outputModeDefaultsKey)
+        }
+    }
+    @Published var capitalizationMode: DictationCapitalizationMode {
+        didSet {
+            UserDefaults.standard.set(
+                capitalizationMode.rawValue,
+                forKey: Self.capitalizationModeDefaultsKey
+            )
         }
     }
 
@@ -76,6 +101,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private var insertionMode: TextInjector.InsertionMode = .pasteboard
     private var streamingFailed = false
     private var sessionOutputMode: DictationOutputMode
+    private var sessionCapitalizationMode: DictationCapitalizationMode
     private let startSound = NSSound(named: "Blow")
     private let stopSound = NSSound(named: "Bottle")
 
@@ -86,8 +112,16 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         let savedOutputMode = UserDefaults.standard.string(forKey: Self.outputModeDefaultsKey)
         let initialOutputMode = DictationOutputMode(rawValue: savedOutputMode ?? "")
             ?? .singleSpeaker
+        let savedCapitalizationMode = UserDefaults.standard.string(
+            forKey: Self.capitalizationModeDefaultsKey
+        )
+        let initialCapitalizationMode = DictationCapitalizationMode(
+            rawValue: savedCapitalizationMode ?? ""
+        ) ?? .standard
         self.outputMode = initialOutputMode
+        self.capitalizationMode = initialCapitalizationMode
         self.sessionOutputMode = initialOutputMode
+        self.sessionCapitalizationMode = initialCapitalizationMode
 
         audioEngine.onBuffer = { [weak self] buffer, hostTime in
             self?.handleAudioChunk(buffer, hostTime: hostTime, source: .microphone)
@@ -147,6 +181,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         previewText = ""
         streamingFailed = false
         sessionOutputMode = outputMode
+        sessionCapitalizationMode = capitalizationMode
 
         do {
             try ensureMicrophonePermission()
@@ -200,7 +235,10 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                 self.processChunkSynchronously(finalChunk)
             }
 
-            let finalText = self.transcriber?.finalize(outputMode: self.sessionOutputMode) ?? ""
+            let finalText = self.applyCapitalization(
+                to: self.transcriber?.finalize(outputMode: self.sessionOutputMode) ?? "",
+                mode: self.sessionCapitalizationMode
+            )
 
             // flush returns only what hasn't been streamed yet
             let remainingText = self.textStateManager.flush(finalText: finalText)
@@ -297,7 +335,17 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
         do {
             guard let result = try transcriber?.process(chunk, outputMode: sessionOutputMode) else { return }
-            let delta = textStateManager.update(with: result)
+            let formattedResult = TranscriptionResult(
+                committedText: applyCapitalization(
+                    to: result.committedText,
+                    mode: sessionCapitalizationMode
+                ),
+                partialText: applyCapitalization(
+                    to: result.partialText,
+                    mode: sessionCapitalizationMode
+                )
+            )
+            let delta = textStateManager.update(with: formattedResult)
 
             // Stream text into the focused app
             if !streamingFailed {
@@ -312,7 +360,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             // Update preview in menu bar popover
-            let combinedPreview = result.committedText + result.partialText
+            let combinedPreview = formattedResult.committedText + formattedResult.partialText
 
             DispatchQueue.main.async { [weak self] in
                 self?.previewText = combinedPreview
@@ -344,6 +392,18 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         default:
             microphoneAuthorized = false
             throw DictationError.microphonePermissionDenied
+        }
+    }
+
+    private func applyCapitalization(
+        to text: String,
+        mode: DictationCapitalizationMode
+    ) -> String {
+        switch mode {
+        case .standard:
+            return text
+        case .lowercase:
+            return text.lowercased()
         }
     }
 }
