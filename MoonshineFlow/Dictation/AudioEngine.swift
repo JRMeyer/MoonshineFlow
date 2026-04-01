@@ -1,7 +1,8 @@
 @preconcurrency import AVFoundation
+import AudioToolbox
 
 final class AudioEngine {
-    var onBuffer: ((AVAudioPCMBuffer) -> Void)?
+    var onBuffer: ((AVAudioPCMBuffer, UInt64) -> Void)?
 
     private let engine = AVAudioEngine()
     private let bufferSize: AVAudioFrameCount
@@ -32,8 +33,8 @@ final class AudioEngine {
 
         inputNode.removeTap(onBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: inputFormat) {
-            [weak self] buffer, _ in
-            self?.handleInputBuffer(buffer)
+            [weak self] buffer, time in
+            self?.handleInputBuffer(buffer, at: time)
         }
 
         engine.prepare()
@@ -49,7 +50,7 @@ final class AudioEngine {
         isRunning = false
     }
 
-    private func handleInputBuffer(_ buffer: AVAudioPCMBuffer) {
+    private func handleInputBuffer(_ buffer: AVAudioPCMBuffer, at time: AVAudioTime) {
         guard let converter else { return }
 
         let ratio = targetFormat.sampleRate / buffer.format.sampleRate
@@ -73,6 +74,7 @@ final class AudioEngine {
             return
         }
 
-        onBuffer?(convertedBuffer)
+        let hostTime = time.isHostTimeValid ? time.hostTime : AudioGetCurrentHostTime()
+        onBuffer?(convertedBuffer, hostTime)
     }
 }

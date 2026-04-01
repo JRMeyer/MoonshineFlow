@@ -20,6 +20,23 @@ enum DictationOutputMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum SystemAudioAccessState {
+    case unknown
+    case available
+    case unavailable
+
+    var title: String {
+        switch self {
+        case .unknown:
+            return "Will prompt on first use"
+        case .available:
+            return "Granted"
+        case .unavailable:
+            return "Missing"
+        }
+    }
+}
+
 final class DictationController: ObservableObject, @unchecked Sendable {
     enum State: String {
         case idle = "Idle"
@@ -32,6 +49,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     @Published private(set) var previewText = ""
     @Published private(set) var lastError = ""
     @Published private(set) var microphoneAuthorized = false
+    @Published private(set) var systemAudioAccessState: SystemAudioAccessState = .unknown
     @Published private(set) var accessibilityTrusted = false
     @Published private(set) var inputMonitoringAuthorized = false
     @Published var outputMode: DictationOutputMode {
@@ -48,7 +66,8 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
     private let modelURL: URL?
     private let audioEngine = AudioEngine()
-    private let chunkBuffer = ChunkBuffer()
+    private let systemAudioCapture = SystemAudioCapture()
+    private let chunkBuffer = MixedChunkBuffer()
     private let textStateManager = TextStateManager()
     private let textInjector = TextInjector()
     private let hotkeyManager: HotkeyManager
@@ -70,8 +89,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         self.outputMode = initialOutputMode
         self.sessionOutputMode = initialOutputMode
 
-        audioEngine.onBuffer = { [weak self] buffer in
-            self?.handleAudioChunk(buffer)
+        audioEngine.onBuffer = { [weak self] buffer, hostTime in
+            self?.handleAudioChunk(buffer, hostTime: hostTime, source: .microphone)
+        }
+        systemAudioCapture.onBuffer = { [weak self] buffer, hostTime in
+            self?.handleAudioChunk(buffer, hostTime: hostTime, source: .systemAudio)
         }
         chunkBuffer.onChunkReady = { [weak self] chunk in
             self?.processChunkSynchronously(chunk)
@@ -101,6 +123,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     deinit {
         hotkeyManager.stop()
         audioEngine.stop()
+        systemAudioCapture.stop()
         transcriber?.close()
     }
 
@@ -146,6 +169,17 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             state = .listening
             startSound?.play()
             try audioEngine.start()
+            do {
+                try systemAudioCapture.start()
+                DispatchQueue.main.async { [weak self] in
+                    self?.systemAudioAccessState = .available
+                }
+            } catch {
+                DispatchQueue.main.async { [weak self] in
+                    self?.systemAudioAccessState = .unavailable
+                    self?.lastError = "System audio capture unavailable. \(error.localizedDescription)"
+                }
+            }
         } catch {
             textInjector.endStreamingSession()
             state = .idle
@@ -157,6 +191,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         guard state == .listening else { return }
 
         audioEngine.stop()
+        systemAudioCapture.stop()
 
         processingQueue.async { [weak self] in
             guard let self else { return }
@@ -234,15 +269,26 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         NSWorkspace.shared.open(url)
     }
 
+    func openSystemAudioSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
     func refreshPermissions() {
         accessibilityTrusted = textInjector.isAccessibilityTrusted
         microphoneAuthorized = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         inputMonitoringAuthorized = CGPreflightListenEventAccess()
     }
 
-    private func handleAudioChunk(_ buffer: AVAudioPCMBuffer) {
+    private func handleAudioChunk(
+        _ buffer: AVAudioPCMBuffer,
+        hostTime: UInt64,
+        source: AudioCaptureSource
+    ) {
         processingQueue.async { [weak self] in
-            self?.chunkBuffer.append(buffer)
+            self?.chunkBuffer.append(buffer, hostTime: hostTime, source: source)
         }
     }
 

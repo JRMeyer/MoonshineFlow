@@ -24,6 +24,9 @@ struct ContentView: View {
         if !controller.microphoneAuthorized {
             permissions.append(("Microphone", controller.requestMicrophonePermission))
         }
+        if controller.systemAudioAccessState == .unavailable {
+            permissions.append(("System Audio", controller.openSystemAudioSettings))
+        }
 
         return permissions
     }
@@ -47,7 +50,7 @@ struct ContentView: View {
 
             infoCard(
                 title: controller.state == .listening ? "Listening now" : "Ready",
-                message: controller.hotkeyDescription + " starts dictation. Tap once to stop.",
+                message: controller.hotkeyDescription + " starts dictation with microphone and system audio. Tap once to stop.",
                 systemImage: controller.menuBarIconName
             )
 

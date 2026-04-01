@@ -40,6 +40,17 @@ struct SettingsView: View {
                 }
 
                 HStack {
+                    Text("System Audio")
+                    Spacer()
+                    Text(controller.systemAudioAccessState.title)
+                    if controller.systemAudioAccessState == .unavailable {
+                        Button("Open Settings") {
+                            controller.openSystemAudioSettings()
+                        }
+                    }
+                }
+
+                HStack {
                     Text("Text Pasting")
                     Spacer()
                     Text(controller.accessibilityTrusted ? "Granted" : "Missing")
@@ -53,6 +64,7 @@ struct SettingsView: View {
 
             Section("Notes") {
                 Text("MoonshineFlow transcribes locally with Moonshine and inserts text into the focused app.")
+                Text("System audio recording permission is requested automatically the first time a dictation session starts.")
                 Text("If direct Accessibility insertion fails for a target app, the injector falls back to clipboard paste.")
             }
         }

@@ -28,5 +28,7 @@
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs microphone access to transcribe audio from your microphone.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>This app needs permission to capture system audio so dictation can include speaker output as well as your microphone.</string>
 </dict>
 </plist>
