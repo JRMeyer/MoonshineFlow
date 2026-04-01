@@ -14,6 +14,11 @@ struct SettingsView: View {
                         Text(mode.title).tag(mode)
                     }
                 }
+                Picker("Capitalization", selection: $controller.capitalizationMode) {
+                    ForEach(DictationCapitalizationMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
             }
 
             Section("Permissions") {
