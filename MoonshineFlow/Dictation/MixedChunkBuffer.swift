@@ -56,12 +56,22 @@ final class MixedChunkBuffer {
             source: source,
             sampleCount: samples.count
         )
-        let endFrame = startFrame + Int64(samples.count)
+
+        let droppedPrefixFrames = max(mixOffsetFrame - startFrame, 0)
+        let droppedPrefixSamples = min(Int(droppedPrefixFrames), samples.count)
+        guard droppedPrefixSamples < samples.count else {
+            lastEndFrameBySource[source] = startFrame + Int64(samples.count)
+            return
+        }
+
+        let writableStartFrame = startFrame + Int64(droppedPrefixSamples)
+        let writableSamples = samples.dropFirst(droppedPrefixSamples)
+        let endFrame = writableStartFrame + Int64(writableSamples.count)
 
         ensureCapacity(toCover: endFrame)
 
-        let startIndex = Int(startFrame - mixOffsetFrame)
-        for (offset, sample) in samples.enumerated() {
+        let startIndex = Int(writableStartFrame - mixOffsetFrame)
+        for (offset, sample) in writableSamples.enumerated() {
             mixedSamples[startIndex + offset] += sample
         }
 

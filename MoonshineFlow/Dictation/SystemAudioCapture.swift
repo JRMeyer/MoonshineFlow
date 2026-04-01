@@ -38,10 +38,14 @@ final class SystemAudioCapture {
             guard let outputDevice = try system.defaultOutputDevice else {
                 throw SystemAudioCaptureError.outputDeviceUnavailable
             }
+            let outputDeviceUID = try outputDevice.uid
+            let outputStreamIndex = try outputStreamIndex(for: outputDevice)
 
             let excludedProcesses = currentProcessObjectIDs()
             let tapDescription = CATapDescription(
-                stereoGlobalTapButExcludeProcesses: excludedProcesses
+                excludingProcesses: excludedProcesses,
+                deviceUID: outputDeviceUID,
+                stream: outputStreamIndex
             )
             tapDescription.uuid = UUID()
             tapDescription.name = "MoonshineFlow System Audio"
@@ -69,13 +73,13 @@ final class SystemAudioCapture {
             let aggregateDeviceDescription: [String: Any] = [
                 kAudioAggregateDeviceNameKey: "MoonshineFlow System Audio",
                 kAudioAggregateDeviceUIDKey: "ai.moonshine.flow.aggregate.\(UUID().uuidString)",
-                kAudioAggregateDeviceMainSubDeviceKey: try outputDevice.uid,
+                kAudioAggregateDeviceMainSubDeviceKey: outputDeviceUID,
                 kAudioAggregateDeviceIsPrivateKey: true,
                 kAudioAggregateDeviceIsStackedKey: false,
                 kAudioAggregateDeviceTapAutoStartKey: true,
                 kAudioAggregateDeviceSubDeviceListKey: [
                     [
-                        kAudioSubDeviceUIDKey: try outputDevice.uid,
+                        kAudioSubDeviceUIDKey: outputDeviceUID,
                     ]
                 ],
                 kAudioAggregateDeviceTapListKey: [
@@ -210,10 +214,22 @@ final class SystemAudioCapture {
 
         return [processObject.id]
     }
+
+    private func outputStreamIndex(for device: AudioHardwareDevice) throws -> UInt {
+        let streams = try device.streams
+        guard let streamIndex = try streams.enumerated().first(where: { _, stream in
+            try stream.direction == .output
+        })?.offset else {
+            throw SystemAudioCaptureError.outputStreamUnavailable
+        }
+
+        return UInt(streamIndex)
+    }
 }
 
 private enum SystemAudioCaptureError: LocalizedError {
     case outputDeviceUnavailable
+    case outputStreamUnavailable
     case invalidFormat
     case coreAudioFailure(operation: String, status: OSStatus)
 
@@ -221,6 +237,8 @@ private enum SystemAudioCaptureError: LocalizedError {
         switch self {
         case .outputDeviceUnavailable:
             return "No system output device is available for capture."
+        case .outputStreamUnavailable:
+            return "The active output device does not expose an output stream for system audio capture."
         case .invalidFormat:
             return "System audio capture returned an invalid audio format."
         case let .coreAudioFailure(operation, status):
