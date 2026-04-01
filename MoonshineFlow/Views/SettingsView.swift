@@ -19,6 +19,7 @@ struct SettingsView: View {
                         Text(mode.title).tag(mode)
                     }
                 }
+                .disabled(controller.state == .listening)
             }
 
             Section("Permissions") {
