@@ -140,7 +140,7 @@ final class Transcriber {
         defer { lock.unlock() }
 
         let orderedLines = lines.values.sorted { $0.order < $1.order }
-        let committedLines = orderedLines.filter { includeIncomplete || $0.isComplete }
+        let committedLines = includeIncomplete ? orderedLines : committedPrefix(from: orderedLines)
         let committed = format(lines: committedLines, outputMode: outputMode)
         let partial: String
         if includeIncomplete {
@@ -160,6 +160,17 @@ final class Transcriber {
         )
     }
 
+    private func committedPrefix(from orderedLines: [LineState]) -> [LineState] {
+        var committedLines: [LineState] = []
+
+        for line in orderedLines {
+            guard line.isComplete else { break }
+            committedLines.append(line)
+        }
+
+        return committedLines
+    }
+
     private func format(lines: [LineState], outputMode: DictationOutputMode) -> String {
         let orderedNonEmptyLines = lines.filter { !$0.text.isEmpty }
         switch outputMode {
@@ -168,8 +179,12 @@ final class Transcriber {
         case .multiSpeaker:
             var formatted = ""
             var previousSpeakerIndex: UInt32?
+            var latestTextBySpeaker: [UInt32: String] = [:]
 
             for line in orderedNonEmptyLines {
+                let lineText = incrementalText(for: line, latestTextBySpeaker: &latestTextBySpeaker)
+                guard !lineText.isEmpty else { continue }
+
                 let needsSpeakerHeader = line.hasSpeakerId && previousSpeakerIndex != line.speakerIndex
 
                 if !formatted.isEmpty {
@@ -180,7 +195,7 @@ final class Transcriber {
                     formatted += "Speaker \(line.speakerIndex + 1):\n"
                 }
 
-                formatted += line.text
+                formatted += lineText
 
                 if line.hasSpeakerId {
                     previousSpeakerIndex = line.speakerIndex
@@ -189,6 +204,33 @@ final class Transcriber {
 
             return formatted
         }
+    }
+
+    private func incrementalText(
+        for line: LineState,
+        latestTextBySpeaker: inout [UInt32: String]
+    ) -> String {
+        guard line.hasSpeakerId else {
+            return line.text
+        }
+
+        defer {
+            latestTextBySpeaker[line.speakerIndex] = line.text
+        }
+
+        guard let previousText = latestTextBySpeaker[line.speakerIndex] else {
+            return line.text
+        }
+
+        if line.text.hasPrefix(previousText) {
+            return normalize(String(line.text.dropFirst(previousText.count)))
+        }
+
+        if previousText.hasPrefix(line.text) {
+            return ""
+        }
+
+        return line.text
     }
 
     private func normalize(_ text: String) -> String {
