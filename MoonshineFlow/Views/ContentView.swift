@@ -55,35 +55,30 @@ struct ContentView: View {
                 systemImage: controller.menuBarIconName
             )
 
-            Picker("Audio Source", selection: $controller.audioSourceMode) {
-                ForEach(AudioSourceMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
+            VStack(alignment: .leading, spacing: 14) {
+                settingGroup(title: "Audio Source") {
+                    Picker("Audio Source", selection: $controller.audioSourceMode) {
+                        ForEach(AudioSourceMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                }
+
+                settingGroup(title: "Speaker Output") {
+                    Picker("Speaker Output", selection: $controller.outputMode) {
+                        Text("Single Speaker").tag(DictationOutputMode.singleSpeaker)
+                        Text("Multi Speaker").tag(DictationOutputMode.multiSpeaker)
+                    }
+                }
+
+                settingGroup(title: "Capitalization") {
+                    Picker("Capitalization", selection: $controller.capitalizationMode) {
+                        Text("Standard").tag(DictationCapitalizationMode.standard)
+                        Text("Lowercase").tag(DictationCapitalizationMode.lowercase)
+                    }
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .disabled(controller.state == .listening)
-            .padding(12)
-            .background(panelBackground)
-
-            Picker("Speaker Output", selection: $controller.outputMode) {
-                Text("Single Speaker").tag(DictationOutputMode.singleSpeaker)
-                Text("Multi Speaker").tag(DictationOutputMode.multiSpeaker)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .disabled(controller.state == .listening)
-            .padding(12)
-            .background(panelBackground)
-
-            Picker("Capitalization", selection: $controller.capitalizationMode) {
-                Text("Standard").tag(DictationCapitalizationMode.standard)
-                Text("Lowercase").tag(DictationCapitalizationMode.lowercase)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .disabled(controller.state == .listening)
-            .padding(12)
+            .padding(14)
             .background(panelBackground)
 
             if !controller.lastError.isEmpty {
@@ -129,6 +124,23 @@ struct ContentView: View {
     private var panelBackground: some View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(.quaternary.opacity(0.45))
+    }
+
+    private func settingGroup<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            content()
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .disabled(controller.state == .listening)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     private func infoCard(title: String, message: String, systemImage: String) -> some View {
