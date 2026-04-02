@@ -27,7 +27,6 @@
 		D10000000000000000000005 /* TextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000005 /* TextInjector.swift */; };
 		D10000000000000000000006 /* TextStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000006 /* TextStateManager.swift */; };
 		D10000000000000000000007 /* Transcriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000007 /* Transcriber.swift */; };
-		D10000000000000000000008 /* MixedChunkBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000008 /* MixedChunkBuffer.swift */; };
 		D10000000000000000000009 /* SystemAudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000009 /* SystemAudioCapture.swift */; };
 		C44093732816EC8800FB8386 /* Synth.aif in Resources */ = {isa = PBXBuildFile; fileRef = C44093722816EC8800FB8386 /* Synth.aif */; };
 		C470F0812811C5CB00D29309 /* ScreenRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C470F0802811C5CB00D29309 /* ScreenRecorder.swift */; };
@@ -49,7 +48,6 @@
 		D20000000000000000000005 /* TextInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInjector.swift; sourceTree = "<group>"; };
 		D20000000000000000000006 /* TextStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextStateManager.swift; sourceTree = "<group>"; };
 		D20000000000000000000007 /* Transcriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcriber.swift; sourceTree = "<group>"; };
-		D20000000000000000000008 /* MixedChunkBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixedChunkBuffer.swift; sourceTree = "<group>"; };
 		D20000000000000000000009 /* SystemAudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioCapture.swift; sourceTree = "<group>"; };
 		7C6C99F1D4B6E3EBA3A7B7DF /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		9AEEB9169F5D7FC75E6B35A2 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
@@ -97,7 +95,6 @@
 				D20000000000000000000002 /* ChunkBuffer.swift */,
 				D20000000000000000000003 /* DictationController.swift */,
 				D20000000000000000000004 /* HotkeyManager.swift */,
-				D20000000000000000000008 /* MixedChunkBuffer.swift */,
 				D20000000000000000000009 /* SystemAudioCapture.swift */,
 				D20000000000000000000005 /* TextInjector.swift */,
 				D20000000000000000000006 /* TextStateManager.swift */,
@@ -236,7 +233,6 @@
 				D10000000000000000000002 /* ChunkBuffer.swift in Sources */,
 				D10000000000000000000003 /* DictationController.swift in Sources */,
 				D10000000000000000000004 /* HotkeyManager.swift in Sources */,
-				D10000000000000000000008 /* MixedChunkBuffer.swift in Sources */,
 				D10000000000000000000009 /* SystemAudioCapture.swift in Sources */,
 				D10000000000000000000005 /* TextInjector.swift in Sources */,
 				D10000000000000000000006 /* TextStateManager.swift in Sources */,

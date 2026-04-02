@@ -36,6 +36,33 @@ enum DictationCapitalizationMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum AudioSourceMode: String, CaseIterable, Identifiable {
+    case microphone
+    case system
+    case both
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .microphone:
+            return "Mic"
+        case .system:
+            return "System"
+        case .both:
+            return "Both"
+        }
+    }
+
+    var capturesMicrophone: Bool {
+        self == .microphone || self == .both
+    }
+
+    var capturesSystemAudio: Bool {
+        self == .system || self == .both
+    }
+}
+
 enum SystemAudioAccessState {
     case unknown
     case available
@@ -61,6 +88,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
     private static let outputModeDefaultsKey = "dictationOutputMode"
     private static let capitalizationModeDefaultsKey = "dictationCapitalizationMode"
+    private static let audioSourceModeDefaultsKey = "sessionAudioSourceMode"
 
     @Published private(set) var state: State = .idle
     @Published private(set) var previewText = ""
@@ -82,6 +110,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             )
         }
     }
+    @Published var audioSourceMode: AudioSourceMode {
+        didSet {
+            UserDefaults.standard.set(audioSourceMode.rawValue, forKey: Self.audioSourceModeDefaultsKey)
+        }
+    }
 
     let hotkeyDescription: String
 
@@ -92,23 +125,36 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private let modelURL: URL?
     private let audioEngine = AudioEngine()
     private let systemAudioCapture = SystemAudioCapture()
-    private let chunkBuffer = MixedChunkBuffer()
+    private let micChunkBuffer = ChunkBuffer()
+    private let systemChunkBuffer = ChunkBuffer()
     private let textStateManager = TextStateManager()
     private let textInjector = TextInjector()
     private let hotkeyManager: HotkeyManager
     private let processingQueue = DispatchQueue(label: "ai.moonshine.flow.dictation")
-    private var transcriber: Transcriber?
+    private var micTranscriber: Transcriber?
+    private var systemTranscriber: Transcriber?
     private var insertionMode: TextInjector.InsertionMode = .pasteboard
     private var streamingFailed = false
     private var sessionOutputMode: DictationOutputMode
     private var sessionCapitalizationMode: DictationCapitalizationMode
+    private var sessionAudioSourceMode: AudioSourceMode
+    private var micCommittedSoFar = ""
+    private var systemCommittedSoFar = ""
+    private var mergedCommitted = ""
+    private var micPartial = ""
+    private var systemPartial = ""
     private let startSound = NSSound(named: "Blow")
     private let stopSound = NSSound(named: "Bottle")
+
+    private final class PermissionRequestState: @unchecked Sendable {
+        var granted = false
+    }
 
     init(modelURL: URL?, hotkey: HotkeyManager.Hotkey = .rightOption) {
         self.modelURL = modelURL
         self.hotkeyManager = HotkeyManager(hotkey: hotkey)
         self.hotkeyDescription = hotkey.displayName
+
         let savedOutputMode = UserDefaults.standard.string(forKey: Self.outputModeDefaultsKey)
         let initialOutputMode = DictationOutputMode(rawValue: savedOutputMode ?? "")
             ?? .singleSpeaker
@@ -118,10 +164,18 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         let initialCapitalizationMode = DictationCapitalizationMode(
             rawValue: savedCapitalizationMode ?? ""
         ) ?? .standard
+        let savedAudioSourceMode = UserDefaults.standard.string(
+            forKey: Self.audioSourceModeDefaultsKey
+        )
+        let initialAudioSourceMode = AudioSourceMode(rawValue: savedAudioSourceMode ?? "")
+            ?? .both
+
         self.outputMode = initialOutputMode
         self.capitalizationMode = initialCapitalizationMode
+        self.audioSourceMode = initialAudioSourceMode
         self.sessionOutputMode = initialOutputMode
         self.sessionCapitalizationMode = initialCapitalizationMode
+        self.sessionAudioSourceMode = initialAudioSourceMode
 
         audioEngine.onBuffer = { [weak self] buffer, hostTime in
             self?.handleAudioChunk(buffer, hostTime: hostTime, source: .microphone)
@@ -129,8 +183,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         systemAudioCapture.onBuffer = { [weak self] buffer, hostTime in
             self?.handleAudioChunk(buffer, hostTime: hostTime, source: .systemAudio)
         }
-        chunkBuffer.onChunkReady = { [weak self] chunk in
-            self?.processChunkSynchronously(chunk)
+        micChunkBuffer.onChunkReady = { [weak self] chunk in
+            self?.processChunkSynchronously(chunk, source: .microphone)
+        }
+        systemChunkBuffer.onChunkReady = { [weak self] chunk in
+            self?.processChunkSynchronously(chunk, source: .systemAudio)
         }
         hotkeyManager.onPressChanged = { [weak self] isPressed in
             if isPressed {
@@ -145,20 +202,14 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
         refreshPermissions()
         hotkeyManager.start()
-
-        // Pre-initialize the transcriber so the first keypress isn't slow
-        if let modelURL, FileManager.default.fileExists(atPath: modelURL.path) {
-            processingQueue.async { [weak self] in
-                self?.transcriber = Transcriber(modelPath: modelURL.path)
-            }
-        }
     }
 
     deinit {
         hotkeyManager.stop()
         audioEngine.stop()
         systemAudioCapture.stop()
-        transcriber?.close()
+        micTranscriber?.close()
+        systemTranscriber?.close()
     }
 
     static func makeDefault() -> DictationController {
@@ -182,40 +233,49 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         streamingFailed = false
         sessionOutputMode = outputMode
         sessionCapitalizationMode = capitalizationMode
+        sessionAudioSourceMode = audioSourceMode
 
         do {
-            try ensureMicrophonePermission()
-
             guard let modelURL, FileManager.default.fileExists(atPath: modelURL.path) else {
                 throw DictationError.modelMissing
             }
 
-            if transcriber == nil {
-                transcriber = Transcriber(modelPath: modelURL.path)
-            }
-
-            // Detect insertion mode and begin streaming session before starting audio
             textInjector.beginStreamingSession()
             insertionMode = textInjector.detectInsertionMode()
 
-            try transcriber?.reset()
+            if sessionAudioSourceMode.capturesMicrophone {
+                try ensureMicrophonePermission()
+            }
+
+            try prepareSessionTranscribers(modelPath: modelURL.path)
             textStateManager.reset()
-            chunkBuffer.reset()
+            resetMergeState()
+            micChunkBuffer.reset()
+            systemChunkBuffer.reset()
+
             state = .listening
             startSound?.play()
-            try audioEngine.start()
-            do {
-                try systemAudioCapture.start()
-                DispatchQueue.main.async { [weak self] in
-                    self?.systemAudioAccessState = .available
-                }
-            } catch {
-                DispatchQueue.main.async { [weak self] in
-                    self?.systemAudioAccessState = .unavailable
-                    self?.lastError = "System audio capture unavailable. \(error.localizedDescription)"
+
+            if sessionAudioSourceMode.capturesMicrophone {
+                try audioEngine.start()
+            }
+
+            if sessionAudioSourceMode.capturesSystemAudio {
+                do {
+                    try systemAudioCapture.start()
+                    DispatchQueue.main.async { [weak self] in
+                        self?.systemAudioAccessState = .available
+                    }
+                } catch {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.systemAudioAccessState = .unavailable
+                    }
+                    throw DictationError.systemAudioCaptureUnavailable(error.localizedDescription)
                 }
             }
         } catch {
+            audioEngine.stop()
+            systemAudioCapture.stop()
             textInjector.endStreamingSession()
             state = .idle
             lastError = error.localizedDescription
@@ -231,27 +291,45 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         processingQueue.async { [weak self] in
             guard let self else { return }
 
-            if let finalChunk = self.chunkBuffer.flush() {
-                self.processChunkSynchronously(finalChunk)
+            if self.sessionAudioSourceMode.capturesMicrophone,
+               let finalChunk = self.micChunkBuffer.flush() {
+                self.processChunkSynchronously(finalChunk, source: .microphone)
+            }
+
+            if self.sessionAudioSourceMode.capturesSystemAudio,
+               let finalChunk = self.systemChunkBuffer.flush() {
+                self.processChunkSynchronously(finalChunk, source: .systemAudio)
+            }
+
+            if self.sessionAudioSourceMode.capturesMicrophone {
+                let finalMicText = self.micTranscriber?.finalize(outputMode: self.sessionOutputMode) ?? ""
+                self.updateMergedState(
+                    with: TranscriptionResult(committedText: finalMicText, partialText: ""),
+                    for: .microphone
+                )
+            }
+
+            if self.sessionAudioSourceMode.capturesSystemAudio {
+                let finalSystemText = self.systemTranscriber?.finalize(outputMode: self.sessionOutputMode) ?? ""
+                self.updateMergedState(
+                    with: TranscriptionResult(committedText: finalSystemText, partialText: ""),
+                    for: .systemAudio
+                )
             }
 
             let finalText = self.applyCapitalization(
-                to: self.transcriber?.finalize(outputMode: self.sessionOutputMode) ?? "",
+                to: self.mergedTranscription().committedText,
                 mode: self.sessionCapitalizationMode
             )
 
-            // flush returns only what hasn't been streamed yet
             let remainingText = self.textStateManager.flush(finalText: finalText)
 
-            // For AX mode: end streaming session first (removes partial text),
-            // then insert whatever remains
             if self.insertionMode == .accessibility {
                 self.textInjector.endStreamingSession()
                 if !remainingText.isEmpty {
                     self.textInjector.insert(text: remainingText)
                 }
             } else {
-                // For pasteboard mode: insert remaining text, then end session
                 if !remainingText.isEmpty {
                     self.textInjector.insert(text: remainingText)
                 }
@@ -322,32 +400,36 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 
     private func handleAudioChunk(
         _ buffer: AVAudioPCMBuffer,
-        hostTime: UInt64,
+        hostTime _: UInt64,
         source: AudioCaptureSource
     ) {
         processingQueue.async { [weak self] in
-            self?.chunkBuffer.append(buffer, hostTime: hostTime, source: source)
+            self?.chunkBuffer(for: source)?.append(buffer)
         }
     }
 
-    private func processChunkSynchronously(_ chunk: AudioChunk) {
+    private func processChunkSynchronously(_ chunk: AudioChunk, source: AudioCaptureSource) {
         guard state != .idle else { return }
 
         do {
-            guard let result = try transcriber?.process(chunk, outputMode: sessionOutputMode) else { return }
+            guard let transcriber = transcriber(for: source) else { return }
+
+            let result = try transcriber.process(chunk, outputMode: sessionOutputMode)
+            updateMergedState(with: result, for: source)
+
+            let mergedResult = mergedTranscription()
             let formattedResult = TranscriptionResult(
                 committedText: applyCapitalization(
-                    to: result.committedText,
+                    to: mergedResult.committedText,
                     mode: sessionCapitalizationMode
                 ),
                 partialText: applyCapitalization(
-                    to: result.partialText,
+                    to: mergedResult.partialText,
                     mode: sessionCapitalizationMode
                 )
             )
             let delta = textStateManager.update(with: formattedResult)
 
-            // Stream text into the focused app
             if !streamingFailed {
                 let hasNewContent = !delta.newCommittedSuffix.isEmpty
                     || delta.updatedPartial != delta.previousPartial
@@ -359,9 +441,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                 }
             }
 
-            // Update preview in menu bar popover
             let combinedPreview = formattedResult.committedText + formattedResult.partialText
-
             DispatchQueue.main.async { [weak self] in
                 self?.previewText = combinedPreview
             }
@@ -378,21 +458,101 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             microphoneAuthorized = true
         case .notDetermined:
             let semaphore = DispatchSemaphore(value: 0)
-            var granted = false
+            let requestState = PermissionRequestState()
             AVCaptureDevice.requestAccess(for: .audio) { access in
-                granted = access
+                requestState.granted = access
                 semaphore.signal()
             }
             semaphore.wait()
-            microphoneAuthorized = granted
+            microphoneAuthorized = requestState.granted
 
-            if !granted {
+            if !requestState.granted {
                 throw DictationError.microphonePermissionDenied
             }
         default:
             microphoneAuthorized = false
             throw DictationError.microphonePermissionDenied
         }
+    }
+
+    private func prepareSessionTranscribers(modelPath: String) throws {
+        if sessionAudioSourceMode.capturesMicrophone {
+            if micTranscriber == nil {
+                micTranscriber = Transcriber(modelPath: modelPath)
+            }
+            try micTranscriber?.reset()
+        }
+
+        if sessionAudioSourceMode.capturesSystemAudio {
+            if systemTranscriber == nil {
+                systemTranscriber = Transcriber(modelPath: modelPath)
+            }
+            try systemTranscriber?.reset()
+        }
+    }
+
+    private func resetMergeState() {
+        micCommittedSoFar = ""
+        systemCommittedSoFar = ""
+        mergedCommitted = ""
+        micPartial = ""
+        systemPartial = ""
+    }
+
+    private func chunkBuffer(for source: AudioCaptureSource) -> ChunkBuffer? {
+        switch source {
+        case .microphone:
+            return sessionAudioSourceMode.capturesMicrophone ? micChunkBuffer : nil
+        case .systemAudio:
+            return sessionAudioSourceMode.capturesSystemAudio ? systemChunkBuffer : nil
+        }
+    }
+
+    private func transcriber(for source: AudioCaptureSource) -> Transcriber? {
+        switch source {
+        case .microphone:
+            return micTranscriber
+        case .systemAudio:
+            return systemTranscriber
+        }
+    }
+
+    private func updateMergedState(
+        with result: TranscriptionResult,
+        for source: AudioCaptureSource
+    ) {
+        switch source {
+        case .microphone:
+            micCommittedSoFar = result.committedText
+            micPartial = result.partialText
+        case .systemAudio:
+            systemCommittedSoFar = result.committedText
+            systemPartial = result.partialText
+        }
+
+        recomputeMergedCommitted()
+    }
+
+    private func mergedTranscription() -> TranscriptionResult {
+        let partials = [micPartial, systemPartial].filter { !$0.isEmpty }
+        let partialText: String
+        if partials.isEmpty {
+            partialText = ""
+        } else if mergedCommitted.isEmpty {
+            partialText = partials.joined(separator: " ")
+        } else {
+            partialText = " " + partials.joined(separator: " ")
+        }
+
+        return TranscriptionResult(
+            committedText: mergedCommitted,
+            partialText: partialText
+        )
+    }
+
+    private func recomputeMergedCommitted() {
+        let committedParts = [micCommittedSoFar, systemCommittedSoFar].filter { !$0.isEmpty }
+        mergedCommitted = committedParts.joined(separator: " ")
     }
 
     private func applyCapitalization(
@@ -411,6 +571,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
 private enum DictationError: LocalizedError {
     case modelMissing
     case microphonePermissionDenied
+    case systemAudioCaptureUnavailable(String)
 
     var errorDescription: String? {
         switch self {
@@ -418,6 +579,8 @@ private enum DictationError: LocalizedError {
             return "Moonshine model files are missing from the app bundle."
         case .microphonePermissionDenied:
             return "Microphone permission is required to start dictation."
+        case let .systemAudioCaptureUnavailable(message):
+            return "System audio capture unavailable. \(message)"
         }
     }
 }

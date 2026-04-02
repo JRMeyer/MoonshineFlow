@@ -4,7 +4,7 @@
   <img src="./demo/readme-icon.png" alt="MoonshineFlow icon" width="144">
 </p>
 
-MoonshineFlow is a macOS menu-bar dictation app powered by [Moonshine](https://github.com/moonshine-ai/moonshine) for local, on-device speech recognition. Double-tap a key, speak, and any system audio playing on your Mac is captured too -- then tap again to stop and your words stream into whatever app has focus.
+MoonshineFlow is a macOS menu-bar dictation app powered by [Moonshine](https://github.com/moonshine-ai/moonshine) for local, on-device speech recognition. Double-tap a key, speak, and optionally capture any system audio playing on your Mac too -- then tap again to stop and your words stream into whatever app has focus.
 
 All transcription runs locally. No audio leaves your machine.
 
@@ -78,7 +78,7 @@ MoonshineFlow/
     HotkeyManager.swift            Global hotkey via CGEvent tap
     AudioEngine.swift              Mic capture, resampled to 16kHz mono
     SystemAudioCapture.swift       System output capture via Core Audio taps
-    MixedChunkBuffer.swift         Time-aligns and mixes mic + system audio into 0.6s chunks
+    ChunkBuffer.swift              Chunks each audio source into 0.6s windows
     Transcriber.swift              Moonshine streaming transcription wrapper
     TextStateManager.swift         Tracks streaming text deltas
     TextInjector.swift             Inserts text via AX or clipboard paste
@@ -87,11 +87,11 @@ MoonshineFlow/
 ## Current behavior
 
 - Double-tap right Option to start dictation; single tap to stop
-- Dictation captures both microphone and system output during each session
+- Dictation can capture microphone only, system audio only, or both
 - Text streams into the focused app as you speak
 - AX-capable apps get live partial text that refines in place
 - Terminals get committed sentences streamed via clipboard paste
-- Transcriber is pre-initialized at launch for fast response
+- Microphone and system audio are transcribed in separate streams and merged after transcription
 - Clipboard is saved before dictation and restored after
 
 ## License

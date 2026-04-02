@@ -21,10 +21,11 @@ struct ContentView: View {
         if !controller.accessibilityTrusted {
             permissions.append(("Text Pasting", controller.requestAccessibilityPermission))
         }
-        if !controller.microphoneAuthorized {
+        if controller.audioSourceMode.capturesMicrophone && !controller.microphoneAuthorized {
             permissions.append(("Microphone", controller.requestMicrophonePermission))
         }
-        if controller.systemAudioAccessState == .unavailable {
+        if controller.audioSourceMode.capturesSystemAudio
+            && controller.systemAudioAccessState == .unavailable {
             permissions.append(("System Audio", controller.openSystemAudioSettings))
         }
 
@@ -50,9 +51,20 @@ struct ContentView: View {
 
             infoCard(
                 title: controller.state == .listening ? "Listening now" : "Ready",
-                message: controller.hotkeyDescription + " starts dictation with microphone and system audio. Tap once to stop.",
+                message: controller.hotkeyDescription + " starts dictation with the selected audio source. Tap once to stop.",
                 systemImage: controller.menuBarIconName
             )
+
+            Picker("Audio Source", selection: $controller.audioSourceMode) {
+                ForEach(AudioSourceMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .disabled(controller.state == .listening)
+            .padding(12)
+            .background(panelBackground)
 
             Picker("Speaker Output", selection: $controller.outputMode) {
                 Text("Single Speaker").tag(DictationOutputMode.singleSpeaker)
