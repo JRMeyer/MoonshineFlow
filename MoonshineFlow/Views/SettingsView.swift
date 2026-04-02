@@ -20,6 +20,7 @@ struct SettingsView: View {
                         Text(mode.title).tag(mode)
                     }
                 }
+                .disabled(controller.state == .listening)
                 Picker("Capitalization", selection: $controller.capitalizationMode) {
                     ForEach(DictationCapitalizationMode.allCases) { mode in
                         Text(mode.title).tag(mode)

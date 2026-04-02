@@ -21,10 +21,11 @@ struct ContentView: View {
         if !controller.accessibilityTrusted {
             permissions.append(("Text Pasting", controller.requestAccessibilityPermission))
         }
-        if !controller.microphoneAuthorized {
+        if controller.audioSourceMode.capturesMicrophone && !controller.microphoneAuthorized {
             permissions.append(("Microphone", controller.requestMicrophonePermission))
         }
-        if controller.systemAudioAccessState == .unavailable {
+        if controller.audioSourceMode.capturesSystemAudio
+            && controller.systemAudioAccessState == .unavailable {
             permissions.append(("System Audio", controller.openSystemAudioSettings))
         }
 

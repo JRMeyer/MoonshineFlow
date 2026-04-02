@@ -523,14 +523,14 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     ) {
         switch source {
         case .microphone:
-            mergedCommitted += committedDelta(for: result.committedText, previous: micCommittedSoFar)
             micCommittedSoFar = result.committedText
             micPartial = result.partialText
         case .systemAudio:
-            mergedCommitted += committedDelta(for: result.committedText, previous: systemCommittedSoFar)
             systemCommittedSoFar = result.committedText
             systemPartial = result.partialText
         }
+
+        recomputeMergedCommitted()
     }
 
     private func mergedTranscription() -> TranscriptionResult {
@@ -550,12 +550,9 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         )
     }
 
-    private func committedDelta(for current: String, previous: String) -> String {
-        guard !current.isEmpty else { return "" }
-        if current.hasPrefix(previous) {
-            return String(current.dropFirst(previous.count))
-        }
-        return current
+    private func recomputeMergedCommitted() {
+        let committedParts = [micCommittedSoFar, systemCommittedSoFar].filter { !$0.isEmpty }
+        mergedCommitted = committedParts.joined(separator: " ")
     }
 
     private func applyCapitalization(
