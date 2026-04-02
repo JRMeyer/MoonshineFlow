@@ -78,7 +78,7 @@ MoonshineFlow/
     HotkeyManager.swift            Global hotkey via CGEvent tap
     AudioEngine.swift              Mic capture, resampled to 16kHz mono
     SystemAudioCapture.swift       System output capture via Core Audio taps
-    MixedChunkBuffer.swift         Time-aligns and mixes mic + system audio into 0.6s chunks
+    ChunkBuffer.swift              Chunks each audio source into 0.6s windows
     Transcriber.swift              Moonshine streaming transcription wrapper
     TextStateManager.swift         Tracks streaming text deltas
     TextInjector.swift             Inserts text via AX or clipboard paste

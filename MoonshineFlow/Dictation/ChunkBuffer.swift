@@ -1,5 +1,10 @@
 import AVFoundation
 
+enum AudioCaptureSource {
+    case microphone
+    case systemAudio
+}
+
 struct AudioChunk {
     let samples: [Float]
     let sampleRate: Int32

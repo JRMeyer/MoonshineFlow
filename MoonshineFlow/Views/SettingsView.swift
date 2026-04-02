@@ -9,6 +9,12 @@ struct SettingsView: View {
                 LabeledContent("Hotkey", value: controller.hotkeyDescription)
                 LabeledContent("Mode", value: "Hold to dictate, insert on release")
                 LabeledContent("Model", value: "medium-streaming-en")
+                Picker("Audio Source", selection: $controller.audioSourceMode) {
+                    ForEach(AudioSourceMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .disabled(controller.state == .listening)
                 Picker("Speaker Output", selection: $controller.outputMode) {
                     ForEach(DictationOutputMode.allCases) { mode in
                         Text(mode.title).tag(mode)
@@ -70,7 +76,7 @@ struct SettingsView: View {
 
             Section("Notes") {
                 Text("MoonshineFlow transcribes locally with Moonshine and inserts text into the focused app.")
-                Text("System audio recording permission is requested automatically the first time a dictation session starts.")
+                Text("System audio recording permission is requested automatically the first time you start a session that captures system audio.")
                 Text("If direct Accessibility insertion fails for a target app, the injector falls back to clipboard paste.")
             }
         }
