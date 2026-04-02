@@ -214,15 +214,13 @@ final class Transcriber {
             return line.text
         }
 
-        defer {
-            latestTextBySpeaker[line.speakerIndex] = line.text
-        }
-
         guard let previousText = latestTextBySpeaker[line.speakerIndex] else {
+            latestTextBySpeaker[line.speakerIndex] = line.text
             return line.text
         }
 
         if line.text.hasPrefix(previousText) {
+            latestTextBySpeaker[line.speakerIndex] = line.text
             return normalize(String(line.text.dropFirst(previousText.count)))
         }
 
@@ -230,6 +228,7 @@ final class Transcriber {
             return ""
         }
 
+        latestTextBySpeaker[line.speakerIndex] = line.text
         return line.text
     }
 

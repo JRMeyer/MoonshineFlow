@@ -4,8 +4,6 @@ struct ContentView: View {
     @ObservedObject var controller: DictationController
     @State private var showingBothAudioWarning = false
 
-    private let contentWidth: CGFloat = 318
-
     private var stateTint: Color {
         switch controller.state {
         case .idle:
@@ -72,6 +70,7 @@ struct ContentView: View {
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .padding(.top, 1)
+                                .accessibilityHidden(true)
 
                             Text("FYI: Both works best with headphones. Speaker output can bleed into the mic.")
                                 .font(.caption)
@@ -89,6 +88,7 @@ struct ContentView: View {
                                     .frame(width: 18, height: 18)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Dismiss headphone notice")
                         }
                         .padding(10)
                         .background(
@@ -142,7 +142,6 @@ struct ContentView: View {
             }
         }
         .padding(14)
-        .frame(width: contentWidth, alignment: .leading)
         .onAppear {
             controller.refreshPermissions()
             showingBothAudioWarning = controller.audioSourceMode == .both
