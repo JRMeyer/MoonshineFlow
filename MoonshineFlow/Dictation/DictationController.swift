@@ -168,7 +168,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             forKey: Self.audioSourceModeDefaultsKey
         )
         let initialAudioSourceMode = AudioSourceMode(rawValue: savedAudioSourceMode ?? "")
-            ?? .both
+            ?? .microphone
 
         self.outputMode = initialOutputMode
         self.capitalizationMode = initialCapitalizationMode

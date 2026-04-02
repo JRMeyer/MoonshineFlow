@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var controller: DictationController
+    @State private var showingBothAudioWarning = false
 
     private var stateTint: Color {
         switch controller.state {
@@ -62,6 +63,39 @@ struct ContentView: View {
                             Text(mode.title).tag(mode)
                         }
                     }
+
+                    if showingBothAudioWarning {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "headphones")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 1)
+                                .accessibilityHidden(true)
+
+                            Text("FYI: Both works best with headphones. Speaker output can bleed into the mic.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Spacer(minLength: 0)
+
+                            Button {
+                                showingBothAudioWarning = false
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 18, height: 18)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Dismiss headphone notice")
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(.quaternary.opacity(0.55))
+                        )
+                    }
                 }
 
                 settingGroup(title: "Speaker Output") {
@@ -78,6 +112,7 @@ struct ContentView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .background(panelBackground)
 
@@ -109,6 +144,10 @@ struct ContentView: View {
         .padding(14)
         .onAppear {
             controller.refreshPermissions()
+            showingBothAudioWarning = controller.audioSourceMode == .both
+        }
+        .onChange(of: controller.audioSourceMode) { _, newMode in
+            showingBothAudioWarning = newMode == .both
         }
     }
 
@@ -160,6 +199,7 @@ struct ContentView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(panelBackground)
     }
