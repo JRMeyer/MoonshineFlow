@@ -443,6 +443,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                     if hasNewContent {
                         let ok = textInjector.streamInsert(delta: delta, mode: insertionMode)
                         if !ok {
+                            textStateManager.rollbackLastUpdate()
                             streamingFailed = true
                         }
                     }

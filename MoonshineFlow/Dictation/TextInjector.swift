@@ -137,14 +137,7 @@ final class TextInjector: @unchecked Sendable {
         // Calculate the range to replace: the previous partial text we inserted
         let replaceLocation = selectedRange.location - partialInsertionLength
         guard replaceLocation >= 0, replaceLocation + partialInsertionLength <= nsValue.length else {
-            // Fallback: just append
-            partialInsertionLength = 0
-            guard appendViaAccessibility(delta.newCommittedSuffix + delta.updatedPartial, element: element) else {
-                return false
-            }
-            streamedInsertionLength += (delta.newCommittedSuffix + delta.updatedPartial as NSString).length
-            partialInsertionLength = (delta.updatedPartial as NSString).length
-            return true
+            return false
         }
 
         let replaceRange = NSRange(location: replaceLocation, length: partialInsertionLength)

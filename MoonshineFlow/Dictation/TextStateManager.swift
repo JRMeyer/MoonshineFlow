@@ -10,15 +10,22 @@ struct StreamingTextDelta {
 final class TextStateManager {
     private var lastEmittedCommitted = ""
     private var lastEmittedPartial = ""
+    private var previousCommitted = ""
+    private var previousPartial = ""
 
     func reset() {
         lastEmittedCommitted = ""
         lastEmittedPartial = ""
+        previousCommitted = ""
+        previousPartial = ""
     }
 
     func update(with result: TranscriptionResult) -> StreamingTextDelta {
         let committed = result.committedText
         let partial = result.partialText
+
+        previousCommitted = lastEmittedCommitted
+        previousPartial = lastEmittedPartial
 
         var newCommittedSuffix: String
         var replacementText: String?
@@ -44,6 +51,11 @@ final class TextStateManager {
         )
     }
 
+    func rollbackLastUpdate() {
+        lastEmittedCommitted = previousCommitted
+        lastEmittedPartial = previousPartial
+    }
+
     func flush(finalText: String) -> String {
         let normalized = finalText
 
@@ -58,6 +70,8 @@ final class TextStateManager {
 
         lastEmittedCommitted = normalized
         lastEmittedPartial = ""
+        previousCommitted = normalized
+        previousPartial = ""
         return remaining
     }
 }
