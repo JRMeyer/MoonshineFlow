@@ -10,6 +10,27 @@ final class Transcriber {
     private struct SpeakerIdentity: Hashable {
         let speakerId: UInt64?
         let speakerIndex: UInt32
+
+        static func == (lhs: SpeakerIdentity, rhs: SpeakerIdentity) -> Bool {
+            switch (lhs.speakerId, rhs.speakerId) {
+            case let (.some(lhsSpeakerId), .some(rhsSpeakerId)):
+                return lhsSpeakerId == rhsSpeakerId
+            case (.none, .none):
+                return lhs.speakerIndex == rhs.speakerIndex
+            default:
+                return false
+            }
+        }
+
+        func hash(into hasher: inout Hasher) {
+            if let speakerId {
+                hasher.combine(0)
+                hasher.combine(speakerId)
+            } else {
+                hasher.combine(1)
+                hasher.combine(speakerIndex)
+            }
+        }
     }
 
     private struct LineState {
