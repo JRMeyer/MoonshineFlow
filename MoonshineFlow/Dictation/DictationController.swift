@@ -138,11 +138,8 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private var sessionOutputMode: DictationOutputMode
     private var sessionCapitalizationMode: DictationCapitalizationMode
     private var sessionAudioSourceMode: AudioSourceMode
-    private var micCommittedSoFar = ""
-    private var systemCommittedSoFar = ""
-    private var mergedCommitted = ""
-    private var micPartial = ""
-    private var systemPartial = ""
+    private var micTurns: [TranscriptionTurn] = []
+    private var systemTurns: [TranscriptionTurn] = []
     private let startSound = NSSound(named: "Blow")
     private let stopSound = NSSound(named: "Bottle")
 
@@ -302,23 +299,25 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             if self.sessionAudioSourceMode.capturesMicrophone {
-                let finalMicText = self.micTranscriber?.finalize(outputMode: self.sessionOutputMode) ?? ""
+                let finalMicResult = self.micTranscriber?.finalizeResult(outputMode: self.sessionOutputMode)
+                    ?? TranscriptionResult(committedText: "", partialText: "", turns: [])
                 self.updateMergedState(
-                    with: TranscriptionResult(committedText: finalMicText, partialText: ""),
+                    with: finalMicResult,
                     for: .microphone
                 )
             }
 
             if self.sessionAudioSourceMode.capturesSystemAudio {
-                let finalSystemText = self.systemTranscriber?.finalize(outputMode: self.sessionOutputMode) ?? ""
+                let finalSystemResult = self.systemTranscriber?.finalizeResult(outputMode: self.sessionOutputMode)
+                    ?? TranscriptionResult(committedText: "", partialText: "", turns: [])
                 self.updateMergedState(
-                    with: TranscriptionResult(committedText: finalSystemText, partialText: ""),
+                    with: finalSystemResult,
                     for: .systemAudio
                 )
             }
 
             let finalText = self.applyCapitalization(
-                to: self.mergedTranscription().committedText,
+                to: self.mergedTranscription(includeIncomplete: true).committedText,
                 mode: self.sessionCapitalizationMode
             )
 
@@ -431,7 +430,8 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                 partialText: applyCapitalization(
                     to: mergedResult.partialText,
                     mode: sessionCapitalizationMode
-                )
+                ),
+                turns: mergedResult.turns
             )
             if insertionMode == .accessibility {
                 let delta = textStateManager.update(with: formattedResult)
@@ -501,11 +501,8 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     }
 
     private func resetMergeState() {
-        micCommittedSoFar = ""
-        systemCommittedSoFar = ""
-        mergedCommitted = ""
-        micPartial = ""
-        systemPartial = ""
+        micTurns = []
+        systemTurns = []
     }
 
     private func chunkBuffer(for source: AudioCaptureSource) -> ChunkBuffer? {
@@ -532,36 +529,84 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     ) {
         switch source {
         case .microphone:
-            micCommittedSoFar = result.committedText
-            micPartial = result.partialText
+            micTurns = result.turns
         case .systemAudio:
-            systemCommittedSoFar = result.committedText
-            systemPartial = result.partialText
+            systemTurns = result.turns
         }
-
-        recomputeMergedCommitted()
     }
 
-    private func mergedTranscription() -> TranscriptionResult {
-        let partials = [micPartial, systemPartial].filter { !$0.isEmpty }
+    private func mergedTranscription(includeIncomplete: Bool = false) -> TranscriptionResult {
+        let mergedTurns = mergedTurns()
+        let committedTurns = includeIncomplete ? mergedTurns : committedPrefix(from: mergedTurns)
+        let committedText = render(turns: committedTurns)
+        let fullText = render(turns: mergedTurns)
         let partialText: String
-        if partials.isEmpty {
+        if includeIncomplete {
             partialText = ""
-        } else if mergedCommitted.isEmpty {
-            partialText = partials.joined(separator: " ")
+        } else if fullText.hasPrefix(committedText) {
+            partialText = String(fullText.dropFirst(committedText.count))
         } else {
-            partialText = " " + partials.joined(separator: " ")
+            let safeCommittedText = ""
+            return TranscriptionResult(
+                committedText: safeCommittedText,
+                partialText: fullText,
+                turns: mergedTurns
+            )
         }
 
         return TranscriptionResult(
-            committedText: mergedCommitted,
-            partialText: partialText
+            committedText: committedText,
+            partialText: partialText,
+            turns: mergedTurns
         )
     }
 
-    private func recomputeMergedCommitted() {
-        let committedParts = [micCommittedSoFar, systemCommittedSoFar].filter { !$0.isEmpty }
-        mergedCommitted = committedParts.joined(separator: " ")
+    private func mergedTurns() -> [TranscriptionTurn] {
+        let sourcePriority: [AudioCaptureSource: Int] = [
+            .microphone: 0,
+            .systemAudio: 1,
+        ]
+
+        let sourcedTurns =
+            micTurns.map { (AudioCaptureSource.microphone, $0) }
+            + systemTurns.map { (AudioCaptureSource.systemAudio, $0) }
+
+        return sourcedTurns.sorted { lhs, rhs in
+            if lhs.1.startTime != rhs.1.startTime {
+                return lhs.1.startTime < rhs.1.startTime
+            }
+            let lhsPriority = sourcePriority[lhs.0] ?? 0
+            let rhsPriority = sourcePriority[rhs.0] ?? 0
+            if lhsPriority != rhsPriority {
+                return lhsPriority < rhsPriority
+            }
+            if lhs.1.order != rhs.1.order {
+                return lhs.1.order < rhs.1.order
+            }
+            return lhs.1.lineId < rhs.1.lineId
+        }
+        .map(\.1)
+    }
+
+    private func committedPrefix(from turns: [TranscriptionTurn]) -> [TranscriptionTurn] {
+        var committedTurns: [TranscriptionTurn] = []
+
+        for turn in turns {
+            guard turn.isComplete else { break }
+            committedTurns.append(turn)
+        }
+
+        return committedTurns
+    }
+
+    private func render(turns: [TranscriptionTurn]) -> String {
+        guard !turns.isEmpty else { return "" }
+        switch sessionOutputMode {
+        case .singleSpeaker:
+            return turns.map(\.text).joined(separator: " ")
+        case .multiSpeaker:
+            return turns.map(\.text).joined(separator: "\n\n")
+        }
     }
 
     private func applyCapitalization(

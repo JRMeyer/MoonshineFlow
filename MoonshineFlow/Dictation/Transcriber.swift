@@ -4,6 +4,15 @@ import MoonshineVoice
 struct TranscriptionResult {
     let committedText: String
     let partialText: String
+    let turns: [TranscriptionTurn]
+}
+
+struct TranscriptionTurn {
+    let lineId: UInt64
+    let order: Int
+    let startTime: Float
+    let text: String
+    let isComplete: Bool
 }
 
 final class Transcriber {
@@ -34,7 +43,9 @@ final class Transcriber {
     }
 
     private struct LineState {
+        var lineId: UInt64
         var order: Int
+        var startTime: Float
         var text: String
         var isComplete: Bool
         var hasSpeakerId: Bool
@@ -93,19 +104,25 @@ final class Transcriber {
     }
 
     func process(_ chunk: AudioChunk, outputMode: DictationOutputMode) throws -> TranscriptionResult {
-        guard let stream else { return TranscriptionResult(committedText: "", partialText: "") }
+        guard let stream else {
+            return TranscriptionResult(committedText: "", partialText: "", turns: [])
+        }
         try stream.addAudio(chunk.samples, sampleRate: chunk.sampleRate)
         return snapshot(outputMode: outputMode)
     }
 
-    func finalize(outputMode: DictationOutputMode) -> String {
+    func finalizeResult(outputMode: DictationOutputMode) -> TranscriptionResult {
         if let stream {
             try? stream.stop()
         }
 
-        let finalText = snapshot(includeIncomplete: true, outputMode: outputMode).committedText
+        let finalResult = snapshot(includeIncomplete: true, outputMode: outputMode)
         closeStream()
-        return finalText
+        return finalResult
+    }
+
+    func finalize(outputMode: DictationOutputMode) -> String {
+        finalizeResult(outputMode: outputMode).committedText
     }
 
     func close() {
@@ -127,7 +144,9 @@ final class Transcriber {
         defer { lock.unlock() }
 
         var state = lines[line.lineId] ?? LineState(
+            lineId: line.lineId,
             order: nextOrder,
+            startTime: line.startTime,
             text: "",
             isComplete: false,
             hasSpeakerId: false,
@@ -138,6 +157,8 @@ final class Transcriber {
             nextOrder += 1
         }
 
+        state.lineId = line.lineId
+        state.startTime = line.startTime
         state.hasSpeakerId = line.hasSpeakerId
         state.speakerId = line.speakerId
         state.speakerIndex = line.speakerIndex
@@ -169,13 +190,18 @@ final class Transcriber {
         defer { lock.unlock() }
 
         let orderedLines = lines.values.sorted { $0.order < $1.order }
+        let orderedTurns = turns(from: orderedLines, outputMode: outputMode)
         let committedLines = includeIncomplete ? orderedLines : committedPrefix(from: orderedLines)
-        let committed = format(lines: committedLines, outputMode: outputMode)
+        let committedLineIds = Set(committedLines.map(\.lineId))
+        let committedTurns = includeIncomplete
+            ? orderedTurns
+            : orderedTurns.filter { committedLineIds.contains($0.lineId) }
+        let committed = render(turns: committedTurns, outputMode: outputMode)
         let partial: String
         if includeIncomplete {
             partial = ""
         } else {
-            let fullText = format(lines: orderedLines, outputMode: outputMode)
+            let fullText = render(turns: orderedTurns, outputMode: outputMode)
             if fullText.hasPrefix(committed) {
                 partial = String(fullText.dropFirst(committed.count))
             } else {
@@ -185,7 +211,8 @@ final class Transcriber {
 
         return TranscriptionResult(
             committedText: committed,
-            partialText: partial
+            partialText: partial,
+            turns: orderedTurns
         )
     }
 
@@ -200,20 +227,26 @@ final class Transcriber {
         return committedLines
     }
 
-    private func format(lines: [LineState], outputMode: DictationOutputMode) -> String {
+    private func turns(from lines: [LineState], outputMode: DictationOutputMode) -> [TranscriptionTurn] {
         let orderedNonEmptyLines = lines.filter { !$0.text.isEmpty }
         switch outputMode {
         case .singleSpeaker:
-            return orderedNonEmptyLines.map(\.text).joined(separator: " ")
+            return orderedNonEmptyLines.map { line in
+                TranscriptionTurn(
+                    lineId: line.lineId,
+                    order: line.order,
+                    startTime: line.startTime,
+                    text: line.text,
+                    isComplete: line.isComplete
+                )
+            }
         case .multiSpeaker:
-            var formatted = ""
             var speakerLabels: [SpeakerIdentity: Int] = [:]
             var nextSpeakerLabel = 1
+            var turns: [TranscriptionTurn] = []
 
             for line in orderedNonEmptyLines {
-                if !formatted.isEmpty {
-                    formatted += "\n\n"
-                }
+                var turnText = ""
 
                 if let speakerIdentity = speakerIdentity(for: line) {
                     let speakerLabel: Int
@@ -225,13 +258,32 @@ final class Transcriber {
                         nextSpeakerLabel += 1
                     }
 
-                    formatted += "Speaker \(speakerLabel):\n"
+                    turnText += "Speaker \(speakerLabel):\n"
                 }
 
-                formatted += line.text
+                turnText += line.text
+                turns.append(
+                    TranscriptionTurn(
+                        lineId: line.lineId,
+                        order: line.order,
+                        startTime: line.startTime,
+                        text: turnText,
+                        isComplete: line.isComplete
+                    )
+                )
             }
 
-            return formatted
+            return turns
+        }
+    }
+
+    private func render(turns: [TranscriptionTurn], outputMode: DictationOutputMode) -> String {
+        guard !turns.isEmpty else { return "" }
+        switch outputMode {
+        case .singleSpeaker:
+            return turns.map(\.text).joined(separator: " ")
+        case .multiSpeaker:
+            return turns.map(\.text).joined(separator: "\n\n")
         }
     }
 
