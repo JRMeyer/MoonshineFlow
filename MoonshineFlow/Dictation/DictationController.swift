@@ -527,17 +527,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         with result: TranscriptionResult,
         for source: AudioCaptureSource
     ) {
-        let sourcedTurns = result.turns.map {
-            TranscriptionTurn(
-                lineId: $0.lineId,
-                order: $0.order,
-                startTime: $0.startTime,
-                text: $0.text,
-                isComplete: $0.isComplete,
-                speakerLabel: $0.speakerLabel,
-                source: source
-            )
-        }
+        let sourcedTurns = result.turns.map { $0.withSource(source) }
 
         switch source {
         case .microphone:

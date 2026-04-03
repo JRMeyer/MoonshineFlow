@@ -15,6 +15,18 @@ struct TranscriptionTurn {
     let isComplete: Bool
     let speakerLabel: Int?
     let source: AudioCaptureSource?
+
+    func withSource(_ source: AudioCaptureSource) -> TranscriptionTurn {
+        TranscriptionTurn(
+            lineId: lineId,
+            order: order,
+            startTime: startTime,
+            text: text,
+            isComplete: isComplete,
+            speakerLabel: speakerLabel,
+            source: source
+        )
+    }
 }
 
 final class Transcriber {
@@ -287,18 +299,21 @@ final class Transcriber {
             return turns.map(\.text).joined(separator: " ")
         case .multiSpeaker:
             var blocks: [String] = []
+            var blockSpeakerLabels: [Int?] = []
 
             for turn in turns {
                 if let speakerLabel = turn.speakerLabel {
                     let header = "Speaker \(speakerLabel):"
                     if let lastIndex = blocks.indices.last,
-                       blocks[lastIndex].hasPrefix(header + "\n") {
+                       blockSpeakerLabels[lastIndex] == speakerLabel {
                         blocks[lastIndex] += "\n" + turn.text
                     } else {
                         blocks.append(header + "\n" + turn.text)
+                        blockSpeakerLabels.append(speakerLabel)
                     }
                 } else {
                     blocks.append(turn.text)
+                    blockSpeakerLabels.append(nil)
                 }
             }
 
