@@ -33,6 +33,14 @@ struct ContentView: View {
         return permissions
     }
 
+    private static let resolvedVersionText: String = {
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let buildVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+        return "Version \(shortVersion) (\(buildVersion))"
+    }()
+
+    private var versionText: String { Self.resolvedVersionText }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
@@ -140,6 +148,11 @@ struct ContentView: View {
                 .padding(12)
                 .background(panelBackground)
             }
+
+            Text(versionText)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(14)
         .onAppear {
