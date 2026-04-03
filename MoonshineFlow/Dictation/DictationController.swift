@@ -322,7 +322,12 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                 mode: self.sessionCapitalizationMode
             )
 
-            let remainingText = self.textStateManager.flush(finalText: finalText)
+            let remainingText: String
+            if self.insertionMode == .accessibility {
+                remainingText = self.textStateManager.flush(finalText: finalText)
+            } else {
+                remainingText = finalText
+            }
 
             if self.insertionMode == .accessibility {
                 self.textInjector.endStreamingSession()
@@ -428,15 +433,19 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                     mode: sessionCapitalizationMode
                 )
             )
-            let delta = textStateManager.update(with: formattedResult)
+            if insertionMode == .accessibility {
+                let delta = textStateManager.update(with: formattedResult)
 
-            if !streamingFailed {
-                let hasNewContent = !delta.newCommittedSuffix.isEmpty
-                    || delta.updatedPartial != delta.previousPartial
-                if hasNewContent {
-                    let ok = textInjector.streamInsert(delta: delta, mode: insertionMode)
-                    if !ok {
-                        streamingFailed = true
+                if !streamingFailed {
+                    let hasNewContent = !delta.newCommittedSuffix.isEmpty
+                        || delta.updatedPartial != delta.previousPartial
+                        || delta.replacementText != nil
+                    if hasNewContent {
+                        let ok = textInjector.streamInsert(delta: delta, mode: insertionMode)
+                        if !ok {
+                            textStateManager.rollbackLastUpdate()
+                            streamingFailed = true
+                        }
                     }
                 }
             }
