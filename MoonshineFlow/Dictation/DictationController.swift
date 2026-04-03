@@ -317,7 +317,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             let finalText = self.applyCapitalization(
-                to: self.mergedTranscription().committedText,
+                to: self.mergedTranscription(includeIncomplete: true).committedText,
                 mode: self.sessionCapitalizationMode
             )
 
@@ -535,16 +535,23 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         }
     }
 
-    private func mergedTranscription() -> TranscriptionResult {
+    private func mergedTranscription(includeIncomplete: Bool = false) -> TranscriptionResult {
         let mergedTurns = mergedTurns()
-        let committedTurns = mergedTurns.filter(\.isComplete)
+        let committedTurns = includeIncomplete ? mergedTurns : committedPrefix(from: mergedTurns)
         let committedText = render(turns: committedTurns)
         let fullText = render(turns: mergedTurns)
         let partialText: String
-        if fullText.hasPrefix(committedText) {
+        if includeIncomplete {
+            partialText = ""
+        } else if fullText.hasPrefix(committedText) {
             partialText = String(fullText.dropFirst(committedText.count))
         } else {
-            partialText = fullText
+            let safeCommittedText = ""
+            return TranscriptionResult(
+                committedText: safeCommittedText,
+                partialText: fullText,
+                turns: mergedTurns
+            )
         }
 
         return TranscriptionResult(
@@ -579,6 +586,17 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             return lhs.1.lineId < rhs.1.lineId
         }
         .map(\.1)
+    }
+
+    private func committedPrefix(from turns: [TranscriptionTurn]) -> [TranscriptionTurn] {
+        var committedTurns: [TranscriptionTurn] = []
+
+        for turn in turns {
+            guard turn.isComplete else { break }
+            committedTurns.append(turn)
+        }
+
+        return committedTurns
     }
 
     private func render(turns: [TranscriptionTurn]) -> String {
