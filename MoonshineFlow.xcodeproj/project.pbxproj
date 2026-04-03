@@ -178,6 +178,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		D40000000000000000000001 /* Stamp Build Version */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -192,7 +193,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nBUILD_NUMBER=\"$CURRENT_PROJECT_VERSION\"\nif [ -d \"$SRCROOT/.git\" ]; then\n  BUILD_NUMBER=\"$(git -C \"$SRCROOT\" rev-list --count HEAD)\"\nfi\n\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD_NUMBER\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\necho \"Stamped CFBundleVersion=$BUILD_NUMBER\"\n";
+			shellScript = "set -e\n\nBUILD_NUMBER=\"${CURRENT_PROJECT_VERSION:-1}\"\nif git -C \"$SRCROOT\" rev-parse --is-inside-work-tree >/dev/null 2>&1; then\n  GIT_BUILD_NUMBER=\"$(git -C \"$SRCROOT\" rev-list --count HEAD)\"\n  if [ \"$GIT_BUILD_NUMBER\" -gt \"$BUILD_NUMBER\" ]; then\n    BUILD_NUMBER=\"$GIT_BUILD_NUMBER\"\n  fi\nfi\n\nINFO_PLIST_PATH=\"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Info.plist\"\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD_NUMBER\" \"$INFO_PLIST_PATH\"\necho \"Stamped CFBundleVersion=$BUILD_NUMBER\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -403,12 +404,12 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 30;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"MoonshineFlow/Preview Content\"";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MoonshineFlow/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -438,12 +439,12 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 30;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"MoonshineFlow/Preview Content\"";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MoonshineFlow/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -33,12 +33,13 @@ struct ContentView: View {
         return permissions
     }
 
-    private var versionText: String {
-        let info = Bundle.main.infoDictionary ?? [:]
-        let shortVersion = info["CFBundleShortVersionString"] as? String ?? "?"
-        let buildVersion = info["CFBundleVersion"] as? String ?? "?"
+    private static let resolvedVersionText: String = {
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let buildVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         return "Version \(shortVersion) (\(buildVersion))"
-    }
+    }()
+
+    private var versionText: String { Self.resolvedVersionText }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
