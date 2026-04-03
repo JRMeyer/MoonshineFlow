@@ -527,11 +527,13 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         with result: TranscriptionResult,
         for source: AudioCaptureSource
     ) {
+        let sourcedTurns = result.turns.map { $0.withSource(source) }
+
         switch source {
         case .microphone:
-            micTurns = result.turns
+            micTurns = sourcedTurns
         case .systemAudio:
-            systemTurns = result.turns
+            systemTurns = sourcedTurns
         }
     }
 
@@ -605,7 +607,41 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         case .singleSpeaker:
             return turns.map(\.text).joined(separator: " ")
         case .multiSpeaker:
-            return turns.map(\.text).joined(separator: "\n\n")
+            var blocks: [String] = []
+            var previousSpeakerKey: String?
+
+            for turn in turns {
+                guard let speakerLabel = turn.speakerLabel else {
+                    blocks.append(turn.text)
+                    previousSpeakerKey = nil
+                    continue
+                }
+
+                let header = speakerHeader(for: turn, speakerLabel: speakerLabel)
+                if previousSpeakerKey == header, let lastIndex = blocks.indices.last {
+                    blocks[lastIndex] += "\n" + turn.text
+                } else {
+                    blocks.append(header + "\n" + turn.text)
+                    previousSpeakerKey = header
+                }
+            }
+
+            return blocks.joined(separator: "\n\n")
+        }
+    }
+
+    private func speakerHeader(for turn: TranscriptionTurn, speakerLabel: Int) -> String {
+        guard sessionAudioSourceMode == .both else {
+            return "Speaker \(speakerLabel):"
+        }
+
+        switch turn.source {
+        case .microphone:
+            return "Microphone Speaker \(speakerLabel):"
+        case .systemAudio:
+            return "Speaker \(speakerLabel):"
+        case nil:
+            return "Speaker \(speakerLabel):"
         }
     }
 
