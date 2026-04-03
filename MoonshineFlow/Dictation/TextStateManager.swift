@@ -4,6 +4,7 @@ struct StreamingTextDelta {
     let newCommittedSuffix: String
     let updatedPartial: String
     let previousPartial: String
+    let replacementText: String?
 }
 
 final class TextStateManager {
@@ -20,10 +21,12 @@ final class TextStateManager {
         let partial = result.partialText
 
         var newCommittedSuffix: String
+        var replacementText: String?
         if committed.hasPrefix(lastEmittedCommitted) {
             newCommittedSuffix = String(committed.dropFirst(lastEmittedCommitted.count))
         } else if !committed.isEmpty {
-            newCommittedSuffix = committed
+            newCommittedSuffix = ""
+            replacementText = committed + partial
         } else {
             newCommittedSuffix = ""
         }
@@ -36,7 +39,8 @@ final class TextStateManager {
         return StreamingTextDelta(
             newCommittedSuffix: newCommittedSuffix,
             updatedPartial: partial,
-            previousPartial: previousPartial
+            previousPartial: previousPartial,
+            replacementText: replacementText
         )
     }
 

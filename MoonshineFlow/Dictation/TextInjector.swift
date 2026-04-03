@@ -15,6 +15,7 @@ final class TextInjector: @unchecked Sendable {
 
     private var savedClipboard: String?
     private var partialInsertionLength = 0
+    private var streamedInsertionLength = 0
     private var cachedElement: AXUIElement?
 
     func requestAccessibilityPrompt() {
@@ -27,6 +28,7 @@ final class TextInjector: @unchecked Sendable {
     func beginStreamingSession() {
         savedClipboard = NSPasteboard.general.string(forType: .string)
         partialInsertionLength = 0
+        streamedInsertionLength = 0
         cachedElement = nil
     }
 
@@ -46,6 +48,7 @@ final class TextInjector: @unchecked Sendable {
         }
 
         partialInsertionLength = 0
+        streamedInsertionLength = 0
         cachedElement = nil
         savedClipboard = nil
     }
@@ -98,12 +101,50 @@ final class TextInjector: @unchecked Sendable {
 
         let nsValue = currentValue as NSString
 
+        if let replacementText = delta.replacementText {
+            let replaceLocation = selectedRange.location - streamedInsertionLength
+            guard replaceLocation >= 0, replaceLocation + streamedInsertionLength <= nsValue.length else {
+                return false
+            }
+
+            let replaceRange = NSRange(location: replaceLocation, length: streamedInsertionLength)
+            let updatedValue = nsValue.replacingCharacters(in: replaceRange, with: replacementText)
+            let setResult = AXUIElementSetAttributeValue(
+                element,
+                kAXValueAttribute as CFString,
+                updatedValue as CFTypeRef
+            )
+            guard setResult == .success else { return false }
+
+            let replacementLength = (replacementText as NSString).length
+            let partialLength = (delta.updatedPartial as NSString).length
+            let cursorPosition = replaceLocation + replacementLength
+            streamedInsertionLength = replacementLength
+            partialInsertionLength = partialLength
+
+            var newRange = CFRange(location: cursorPosition, length: 0)
+            if let rangeValue = AXValueCreate(.cfRange, &newRange) {
+                _ = AXUIElementSetAttributeValue(
+                    element,
+                    kAXSelectedTextRangeAttribute as CFString,
+                    rangeValue
+                )
+            }
+
+            return true
+        }
+
         // Calculate the range to replace: the previous partial text we inserted
         let replaceLocation = selectedRange.location - partialInsertionLength
         guard replaceLocation >= 0, replaceLocation + partialInsertionLength <= nsValue.length else {
             // Fallback: just append
             partialInsertionLength = 0
-            return appendViaAccessibility(delta.newCommittedSuffix + delta.updatedPartial, element: element)
+            guard appendViaAccessibility(delta.newCommittedSuffix + delta.updatedPartial, element: element) else {
+                return false
+            }
+            streamedInsertionLength += (delta.newCommittedSuffix + delta.updatedPartial as NSString).length
+            partialInsertionLength = (delta.updatedPartial as NSString).length
+            return true
         }
 
         let replaceRange = NSRange(location: replaceLocation, length: partialInsertionLength)
@@ -141,6 +182,7 @@ final class TextInjector: @unchecked Sendable {
         let totalInserted = (insertText as NSString).length
         let cursorPosition = replaceLocation + totalInserted
 
+        streamedInsertionLength = streamedInsertionLength - partialInsertionLength + totalInserted
         partialInsertionLength = partialLen
 
         // Move cursor to after all inserted text
@@ -222,6 +264,7 @@ final class TextInjector: @unchecked Sendable {
             }
         }
 
+        streamedInsertionLength -= partialInsertionLength
         partialInsertionLength = 0
     }
 
