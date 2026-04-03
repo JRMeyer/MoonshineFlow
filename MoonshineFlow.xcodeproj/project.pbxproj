@@ -162,6 +162,7 @@
 				C4B0DAA3276BA4460015082A /* Sources */,
 				C4B0DAA4276BA4460015082A /* Frameworks */,
 				C4B0DAA5276BA4460015082A /* Resources */,
+				D40000000000000000000001 /* Stamp Build Version */,
 			);
 			buildRules = (
 			);
@@ -173,6 +174,27 @@
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D40000000000000000000001 /* Stamp Build Version */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Stamp Build Version";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\nBUILD_NUMBER=\"$CURRENT_PROJECT_VERSION\"\nif [ -d \"$SRCROOT/.git\" ]; then\n  BUILD_NUMBER=\"$(git -C \"$SRCROOT\" rev-list --count HEAD)\"\nfi\n\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD_NUMBER\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\necho \"Stamped CFBundleVersion=$BUILD_NUMBER\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXProject section */
 		C4B0DA9F276BA4460015082A /* Project object */ = {
