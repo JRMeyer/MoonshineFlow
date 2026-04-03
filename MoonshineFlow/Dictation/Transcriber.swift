@@ -7,11 +7,38 @@ struct TranscriptionResult {
 }
 
 final class Transcriber {
+    private struct SpeakerIdentity: Hashable {
+        let speakerId: UInt64?
+        let speakerIndex: UInt32
+
+        static func == (lhs: SpeakerIdentity, rhs: SpeakerIdentity) -> Bool {
+            switch (lhs.speakerId, rhs.speakerId) {
+            case let (.some(lhsSpeakerId), .some(rhsSpeakerId)):
+                return lhsSpeakerId == rhsSpeakerId
+            case (.none, .none):
+                return lhs.speakerIndex == rhs.speakerIndex
+            default:
+                return false
+            }
+        }
+
+        func hash(into hasher: inout Hasher) {
+            if let speakerId {
+                hasher.combine(0)
+                hasher.combine(speakerId)
+            } else {
+                hasher.combine(1)
+                hasher.combine(speakerIndex)
+            }
+        }
+    }
+
     private struct LineState {
         var order: Int
         var text: String
         var isComplete: Bool
         var hasSpeakerId: Bool
+        var speakerId: UInt64
         var speakerIndex: UInt32
     }
 
@@ -104,6 +131,7 @@ final class Transcriber {
             text: "",
             isComplete: false,
             hasSpeakerId: false,
+            speakerId: 0,
             speakerIndex: 0
         )
         if lines[line.lineId] == nil {
@@ -111,6 +139,7 @@ final class Transcriber {
         }
 
         state.hasSpeakerId = line.hasSpeakerId
+        state.speakerId = line.speakerId
         state.speakerIndex = line.speakerIndex
 
         switch event {
@@ -178,58 +207,38 @@ final class Transcriber {
             return orderedNonEmptyLines.map(\.text).joined(separator: " ")
         case .multiSpeaker:
             var formatted = ""
-            var previousSpeakerIndex: UInt32?
-            var latestTextBySpeaker: [UInt32: String] = [:]
+            var speakerLabels: [SpeakerIdentity: Int] = [:]
+            var nextSpeakerLabel = 1
 
             for line in orderedNonEmptyLines {
-                let lineText = incrementalText(for: line, latestTextBySpeaker: &latestTextBySpeaker)
-                guard !lineText.isEmpty else { continue }
-
-                let needsSpeakerHeader = line.hasSpeakerId && previousSpeakerIndex != line.speakerIndex
-
                 if !formatted.isEmpty {
-                    formatted += needsSpeakerHeader ? "\n\n" : " "
+                    formatted += "\n\n"
                 }
 
-                if needsSpeakerHeader {
-                    formatted += "Speaker \(line.speakerIndex + 1):\n"
+                if let speakerIdentity = speakerIdentity(for: line) {
+                    let speakerLabel: Int
+                    if let existingLabel = speakerLabels[speakerIdentity] {
+                        speakerLabel = existingLabel
+                    } else {
+                        speakerLabel = nextSpeakerLabel
+                        speakerLabels[speakerIdentity] = speakerLabel
+                        nextSpeakerLabel += 1
+                    }
+
+                    formatted += "Speaker \(speakerLabel):\n"
                 }
 
-                formatted += lineText
-
-                if line.hasSpeakerId {
-                    previousSpeakerIndex = line.speakerIndex
-                }
+                formatted += line.text
             }
 
             return formatted
         }
     }
 
-    private func incrementalText(
-        for line: LineState,
-        latestTextBySpeaker: inout [UInt32: String]
-    ) -> String {
-        guard line.hasSpeakerId else {
-            return line.text
-        }
-
-        guard let previousText = latestTextBySpeaker[line.speakerIndex] else {
-            latestTextBySpeaker[line.speakerIndex] = line.text
-            return line.text
-        }
-
-        if line.text.hasPrefix(previousText) {
-            latestTextBySpeaker[line.speakerIndex] = line.text
-            return normalize(String(line.text.dropFirst(previousText.count)))
-        }
-
-        if previousText.hasPrefix(line.text) {
-            return ""
-        }
-
-        latestTextBySpeaker[line.speakerIndex] = line.text
-        return line.text
+    private func speakerIdentity(for line: LineState) -> SpeakerIdentity? {
+        guard line.hasSpeakerId else { return nil }
+        let speakerId = line.speakerId == 0 ? nil : line.speakerId
+        return SpeakerIdentity(speakerId: speakerId, speakerIndex: line.speakerIndex)
     }
 
     private func normalize(_ text: String) -> String {
