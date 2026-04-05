@@ -36,16 +36,32 @@ final class TextInjector: @unchecked Sendable {
             : nil
     }
 
-    func endStreamingSession(insertingRemainingText remainingText: String? = nil) {
+    /// End the streaming session. Returns `true` if `remainingText` was successfully
+    /// inserted via the cached/latched element, `false` if the caller should fall back.
+    @discardableResult
+    func endStreamingSession(insertingRemainingText remainingText: String? = nil) -> Bool {
+        // Resolve the element for cleanup and final insertion
+        let element: AXUIElement? = cachedElement ?? {
+            if let pid = latchedAppPID {
+                return focusedElement(inApp: pid)
+            }
+            return nil
+        }()
+
         // Remove any outstanding partial text
-        if partialInsertionLength > 0, let element = cachedElement {
+        if partialInsertionLength > 0, let element {
             removePartialText(from: element)
         }
 
-        // Insert remaining text via the cached element (needed for latched focus
+        // Insert remaining text via the resolved element (needed for latched focus
         // where the frontmost app may no longer be the original target)
-        if let text = remainingText, !text.isEmpty, let element = cachedElement {
-            appendViaAccessibility(text, element: element)
+        var didInsertRemaining = true
+        if let text = remainingText, !text.isEmpty {
+            if let element {
+                didInsertRemaining = appendViaAccessibility(text, element: element)
+            } else {
+                didInsertRemaining = false
+            }
         }
 
         // Restore clipboard after a delay so any pending Cmd+V paste completes first
@@ -62,6 +78,7 @@ final class TextInjector: @unchecked Sendable {
         cachedElement = nil
         latchedAppPID = nil
         savedClipboard = nil
+        return didInsertRemaining
     }
 
     func detectInsertionMode() -> InsertionMode {

@@ -361,11 +361,14 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             if self.insertionMode == .accessibility {
-                // Insert remaining text via the cached element (handles latched focus
-                // where frontmost app may have changed during the session)
-                self.textInjector.endStreamingSession(
+                // Try inserting remaining text via the cached/latched element.
+                // Fall back to one-shot insert if the element is unavailable.
+                let inserted = self.textInjector.endStreamingSession(
                     insertingRemainingText: remainingText.isEmpty ? nil : remainingText
                 )
+                if !inserted, !remainingText.isEmpty {
+                    self.textInjector.insert(text: remainingText)
+                }
             } else {
                 if !remainingText.isEmpty {
                     self.textInjector.insert(text: remainingText)
