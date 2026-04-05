@@ -17,6 +17,7 @@ final class TextInjector: @unchecked Sendable {
     private var partialInsertionLength = 0
     private var streamedInsertionLength = 0
     private var cachedElement: AXUIElement?
+    private var latchedAppPID: pid_t?
 
     func requestAccessibilityPrompt() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
@@ -25,17 +26,26 @@ final class TextInjector: @unchecked Sendable {
 
     // MARK: - Session lifecycle
 
-    func beginStreamingSession() {
+    func beginStreamingSession(focusLocked: Bool) {
         savedClipboard = NSPasteboard.general.string(forType: .string)
         partialInsertionLength = 0
         streamedInsertionLength = 0
         cachedElement = nil
+        latchedAppPID = focusLocked
+            ? NSWorkspace.shared.frontmostApplication?.processIdentifier
+            : nil
     }
 
-    func endStreamingSession() {
+    func endStreamingSession(insertingRemainingText remainingText: String? = nil) {
         // Remove any outstanding partial text
         if partialInsertionLength > 0, let element = cachedElement {
             removePartialText(from: element)
+        }
+
+        // Insert remaining text via the cached element (needed for latched focus
+        // where the frontmost app may no longer be the original target)
+        if let text = remainingText, !text.isEmpty, let element = cachedElement {
+            appendViaAccessibility(text, element: element)
         }
 
         // Restore clipboard after a delay so any pending Cmd+V paste completes first
@@ -50,6 +60,7 @@ final class TextInjector: @unchecked Sendable {
         partialInsertionLength = 0
         streamedInsertionLength = 0
         cachedElement = nil
+        latchedAppPID = nil
         savedClipboard = nil
     }
 
@@ -87,15 +98,7 @@ final class TextInjector: @unchecked Sendable {
     }
 
     private func streamInsertViaAccessibility(_ delta: StreamingTextDelta) -> Bool {
-        guard let element = cachedElement ?? focusedElement(),
-              !isSecureField(element) else {
-            return false
-        }
-
-        guard
-            let currentValue = copyStringAttribute(kAXValueAttribute, from: element),
-            let selectedRange = copySelectedRange(from: element)
-        else {
+        guard let (element, currentValue, selectedRange) = resolveStreamingElement() else {
             return false
         }
 
@@ -376,6 +379,22 @@ final class TextInjector: @unchecked Sendable {
         return (focusedElement as! AXUIElement)
     }
 
+    private func focusedElement(inApp pid: pid_t) -> AXUIElement? {
+        let appElement = AXUIElementCreateApplication(pid)
+        var focusedElement: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedElement
+        )
+
+        guard result == .success, let focusedElement else {
+            return nil
+        }
+
+        return (focusedElement as! AXUIElement)
+    }
+
     private func isSecureField(_ element: AXUIElement) -> Bool {
         copyStringAttribute(kAXSubroleAttribute, from: element) == (kAXSecureTextFieldSubrole as String)
     }
@@ -404,6 +423,31 @@ final class TextInjector: @unchecked Sendable {
         }
 
         return NSRange(location: selectedRange.location, length: selectedRange.length)
+    }
+
+    /// Resolve a valid AX element for streaming, retrying with a fresh lookup if the cache is stale.
+    /// When focus is latched, re-resolves within the original app rather than following system focus.
+    private func resolveStreamingElement() -> (element: AXUIElement, value: String, selection: NSRange)? {
+        if let cached = cachedElement, !isSecureField(cached),
+           let val = copyStringAttribute(kAXValueAttribute, from: cached),
+           let range = copySelectedRange(from: cached) {
+            return (cached, val, range)
+        }
+        // Cached element is missing or stale — try a fresh lookup
+        cachedElement = nil
+        let fresh: AXUIElement?
+        if let pid = latchedAppPID {
+            fresh = focusedElement(inApp: pid)
+        } else {
+            fresh = focusedElement()
+        }
+        guard let fresh, !isSecureField(fresh),
+              let val = copyStringAttribute(kAXValueAttribute, from: fresh),
+              let range = copySelectedRange(from: fresh) else {
+            return nil
+        }
+        cachedElement = fresh
+        return (fresh, val, range)
     }
 
     private func containsVisibleContent(_ text: String) -> Bool {

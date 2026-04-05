@@ -27,6 +27,12 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(controller.state == .listening)
+                Picker("Focus", selection: $controller.focusMode) {
+                    ForEach(DictationFocusMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .disabled(controller.state == .listening)
             }
 
             Section("Permissions") {

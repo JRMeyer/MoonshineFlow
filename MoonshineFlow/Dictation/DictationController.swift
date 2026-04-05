@@ -36,6 +36,22 @@ enum DictationCapitalizationMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum DictationFocusMode: String, CaseIterable, Identifiable {
+    case automatic
+    case fixed
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic:
+            return "Auto"
+        case .fixed:
+            return "Fixed"
+        }
+    }
+}
+
 enum AudioSourceMode: String, CaseIterable, Identifiable {
     case microphone
     case system
@@ -89,6 +105,7 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private static let outputModeDefaultsKey = "dictationOutputMode"
     private static let capitalizationModeDefaultsKey = "dictationCapitalizationMode"
     private static let audioSourceModeDefaultsKey = "sessionAudioSourceMode"
+    private static let focusModeDefaultsKey = "dictationFocusMode"
 
     @Published private(set) var state: State = .idle
     @Published private(set) var previewText = ""
@@ -115,6 +132,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             UserDefaults.standard.set(audioSourceMode.rawValue, forKey: Self.audioSourceModeDefaultsKey)
         }
     }
+    @Published var focusMode: DictationFocusMode {
+        didSet {
+            UserDefaults.standard.set(focusMode.rawValue, forKey: Self.focusModeDefaultsKey)
+        }
+    }
 
     let hotkeyDescription: String
 
@@ -135,9 +157,12 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private var systemTranscriber: Transcriber?
     private var insertionMode: TextInjector.InsertionMode = .pasteboard
     private var streamingFailed = false
+    private var streamingFailureCount = 0
+    private static let maxStreamingFailures = 3
     private var sessionOutputMode: DictationOutputMode
     private var sessionCapitalizationMode: DictationCapitalizationMode
     private var sessionAudioSourceMode: AudioSourceMode
+    private var sessionFocusMode: DictationFocusMode
     private var micTurns: [TranscriptionTurn] = []
     private var systemTurns: [TranscriptionTurn] = []
     private let startSound = NSSound(named: "Blow")
@@ -166,13 +191,18 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         )
         let initialAudioSourceMode = AudioSourceMode(rawValue: savedAudioSourceMode ?? "")
             ?? .microphone
+        let savedFocusMode = UserDefaults.standard.string(forKey: Self.focusModeDefaultsKey)
+        let initialFocusMode = DictationFocusMode(rawValue: savedFocusMode ?? "")
+            ?? .automatic
 
         self.outputMode = initialOutputMode
         self.capitalizationMode = initialCapitalizationMode
         self.audioSourceMode = initialAudioSourceMode
+        self.focusMode = initialFocusMode
         self.sessionOutputMode = initialOutputMode
         self.sessionCapitalizationMode = initialCapitalizationMode
         self.sessionAudioSourceMode = initialAudioSourceMode
+        self.sessionFocusMode = initialFocusMode
 
         audioEngine.onBuffer = { [weak self] buffer, hostTime in
             self?.handleAudioChunk(buffer, hostTime: hostTime, source: .microphone)
@@ -228,16 +258,18 @@ final class DictationController: ObservableObject, @unchecked Sendable {
         lastError = ""
         previewText = ""
         streamingFailed = false
+        streamingFailureCount = 0
         sessionOutputMode = outputMode
         sessionCapitalizationMode = capitalizationMode
         sessionAudioSourceMode = audioSourceMode
+        sessionFocusMode = focusMode
 
         do {
             guard let modelURL, FileManager.default.fileExists(atPath: modelURL.path) else {
                 throw DictationError.modelMissing
             }
 
-            textInjector.beginStreamingSession()
+            textInjector.beginStreamingSession(focusLocked: sessionFocusMode == .fixed)
             insertionMode = textInjector.detectInsertionMode()
 
             if sessionAudioSourceMode.capturesMicrophone {
@@ -329,10 +361,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
             }
 
             if self.insertionMode == .accessibility {
-                self.textInjector.endStreamingSession()
-                if !remainingText.isEmpty {
-                    self.textInjector.insert(text: remainingText)
-                }
+                // Insert remaining text via the cached element (handles latched focus
+                // where frontmost app may have changed during the session)
+                self.textInjector.endStreamingSession(
+                    insertingRemainingText: remainingText.isEmpty ? nil : remainingText
+                )
             } else {
                 if !remainingText.isEmpty {
                     self.textInjector.insert(text: remainingText)
@@ -444,7 +477,12 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                         let ok = textInjector.streamInsert(delta: delta, mode: insertionMode)
                         if !ok {
                             textStateManager.rollbackLastUpdate()
-                            streamingFailed = true
+                            streamingFailureCount += 1
+                            if streamingFailureCount >= Self.maxStreamingFailures {
+                                streamingFailed = true
+                            }
+                        } else {
+                            streamingFailureCount = 0
                         }
                     }
                 }
