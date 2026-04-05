@@ -119,6 +119,13 @@ struct ContentView: View {
                         Text("Lowercase").tag(DictationCapitalizationMode.lowercase)
                     }
                 }
+
+                settingGroup(title: "Focus") {
+                    Picker("Focus", selection: $controller.focusMode) {
+                        Text("Auto").tag(DictationFocusMode.automatic)
+                        Text("Fixed").tag(DictationFocusMode.fixed)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
