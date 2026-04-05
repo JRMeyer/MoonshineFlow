@@ -103,10 +103,10 @@ final class TextInjector: @unchecked Sendable {
             kAXValueAttribute as CFString,
             &settable
         )
-        guard settableResult == .success, settable.boolValue,
-              copySelectedRange(from: element) != nil
+        let hasSelectedRange = copySelectedRange(from: element) != nil
+        guard settableResult == .success, settable.boolValue, hasSelectedRange
         else {
-            axLog.warning("detectInsertionMode: AX probe failed (settable=\(settableResult == .success && settable.boolValue), range=\(self.copySelectedRange(from: element) != nil)) → pasteboard")
+            axLog.warning("detectInsertionMode: AX probe failed (settable=\(settableResult == .success && settable.boolValue), range=\(hasSelectedRange)) → pasteboard")
             return .pasteboard
         }
 
@@ -128,7 +128,7 @@ final class TextInjector: @unchecked Sendable {
     }
 
     private func streamInsertViaAccessibility(_ delta: StreamingTextDelta) -> Bool {
-        axLog.debug("streamInsert: committed='\(delta.newCommittedSuffix)' partial='\(delta.updatedPartial)' prevPartial='\(delta.previousPartial)' replacement=\(delta.replacementText != nil)")
+        axLog.debug("streamInsert: committedLen=\((delta.newCommittedSuffix as NSString).length) partialLen=\((delta.updatedPartial as NSString).length) prevPartialLen=\((delta.previousPartial as NSString).length) hasReplacement=\(delta.replacementText != nil)")
 
         guard let (element, currentValue, selectedRange) = resolveStreamingElement() else {
             axLog.error("streamInsert: resolveStreamingElement FAILED")
@@ -213,7 +213,7 @@ final class TextInjector: @unchecked Sendable {
             axLog.error("streamInsert: AXSetValue FAILED result=\(setResult.rawValue)")
             return false
         }
-        axLog.debug("streamInsert: OK, inserted '\(insertText)' at \(replaceLocation)")
+        axLog.debug("streamInsert: OK, inserted length=\((insertText as NSString).length) at \(replaceLocation)")
 
         // Track how much of what we inserted is partial (replaceable next time)
         let partialLen = (delta.updatedPartial as NSString).length
