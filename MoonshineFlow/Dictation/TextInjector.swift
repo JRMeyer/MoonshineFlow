@@ -2,6 +2,9 @@ import AppKit
 @preconcurrency import ApplicationServices
 import Carbon.HIToolbox
 import Foundation
+import os.log
+
+private let axLog = Logger(subsystem: "ai.moonshine.flow", category: "TextInjector")
 
 final class TextInjector: @unchecked Sendable {
     enum InsertionMode {
@@ -83,21 +86,31 @@ final class TextInjector: @unchecked Sendable {
 
     func detectInsertionMode() -> InsertionMode {
         if isFocusedAppTerminal() {
+            axLog.info("detectInsertionMode: terminal app → pasteboard")
             return .pasteboard
         }
 
-        // Probe whether AX insertion would work
         guard let element = focusedElement(), !isSecureField(element) else {
+            axLog.warning("detectInsertionMode: no focused element or secure field → pasteboard")
             return .pasteboard
         }
 
-        guard
-            copyStringAttribute(kAXValueAttribute, from: element) != nil,
-            copySelectedRange(from: element) != nil
+        // Check that the value attribute is settable (works even when the field is
+        // empty and kAXValueAttribute reads as nil, e.g. empty Notes documents).
+        var settable: DarwinBoolean = false
+        let settableResult = AXUIElementIsAttributeSettable(
+            element,
+            kAXValueAttribute as CFString,
+            &settable
+        )
+        let hasSelectedRange = copySelectedRange(from: element) != nil
+        guard settableResult == .success, settable.boolValue, hasSelectedRange
         else {
+            axLog.warning("detectInsertionMode: AX probe failed (settable=\(settableResult == .success && settable.boolValue), range=\(hasSelectedRange)) → pasteboard")
             return .pasteboard
         }
 
+        axLog.info("detectInsertionMode: AX value is settable → accessibility")
         cachedElement = element
         return .accessibility
     }
@@ -115,7 +128,10 @@ final class TextInjector: @unchecked Sendable {
     }
 
     private func streamInsertViaAccessibility(_ delta: StreamingTextDelta) -> Bool {
+        axLog.debug("streamInsert: committedLen=\((delta.newCommittedSuffix as NSString).length) partialLen=\((delta.updatedPartial as NSString).length) prevPartialLen=\((delta.previousPartial as NSString).length) hasReplacement=\(delta.replacementText != nil)")
+
         guard let (element, currentValue, selectedRange) = resolveStreamingElement() else {
+            axLog.error("streamInsert: resolveStreamingElement FAILED")
             return false
         }
 
@@ -124,6 +140,7 @@ final class TextInjector: @unchecked Sendable {
         if let replacementText = delta.replacementText {
             let replaceLocation = selectedRange.location - streamedInsertionLength
             guard replaceLocation >= 0, replaceLocation + streamedInsertionLength <= nsValue.length else {
+                axLog.error("streamInsert(replace): bounds check failed loc=\(replaceLocation) streamed=\(self.streamedInsertionLength) valLen=\(nsValue.length)")
                 return false
             }
 
@@ -134,7 +151,10 @@ final class TextInjector: @unchecked Sendable {
                 kAXValueAttribute as CFString,
                 updatedValue as CFTypeRef
             )
-            guard setResult == .success else { return false }
+            guard setResult == .success else {
+                axLog.error("streamInsert(replace): AXSetValue FAILED result=\(setResult.rawValue)")
+                return false
+            }
 
             let replacementLength = (replacementText as NSString).length
             let partialLength = (delta.updatedPartial as NSString).length
@@ -157,6 +177,7 @@ final class TextInjector: @unchecked Sendable {
         // Calculate the range to replace: the previous partial text we inserted
         let replaceLocation = selectedRange.location - partialInsertionLength
         guard replaceLocation >= 0, replaceLocation + partialInsertionLength <= nsValue.length else {
+            axLog.error("streamInsert: bounds check failed loc=\(replaceLocation) partial=\(self.partialInsertionLength) valLen=\(nsValue.length) selLoc=\(selectedRange.location)")
             return false
         }
 
@@ -188,7 +209,11 @@ final class TextInjector: @unchecked Sendable {
             kAXValueAttribute as CFString,
             updatedValue as CFTypeRef
         )
-        guard setResult == .success else { return false }
+        guard setResult == .success else {
+            axLog.error("streamInsert: AXSetValue FAILED result=\(setResult.rawValue)")
+            return false
+        }
+        axLog.debug("streamInsert: OK, inserted length=\((insertText as NSString).length) at \(replaceLocation)")
 
         // Track how much of what we inserted is partial (replaceable next time)
         let partialLen = (delta.updatedPartial as NSString).length
@@ -215,7 +240,7 @@ final class TextInjector: @unchecked Sendable {
         guard containsVisibleContent(text) else { return true }
 
         guard
-            let currentValue = copyStringAttribute(kAXValueAttribute, from: element),
+            let currentValue = copyValueString(from: element),
             let selectedRange = copySelectedRange(from: element)
         else {
             return false
@@ -250,7 +275,7 @@ final class TextInjector: @unchecked Sendable {
 
     private func removePartialText(from element: AXUIElement) {
         guard partialInsertionLength > 0,
-              let currentValue = copyStringAttribute(kAXValueAttribute, from: element),
+              let currentValue = copyValueString(from: element),
               let selectedRange = copySelectedRange(from: element) else { return }
 
         let nsValue = currentValue as NSString
@@ -423,6 +448,23 @@ final class TextInjector: @unchecked Sendable {
         return value as? String
     }
 
+    /// Read the value attribute, handling empty fields (nil → "") and attributed strings.
+    private func copyValueString(from element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(
+            element,
+            kAXValueAttribute as CFString,
+            &value
+        )
+        // Empty field — treat as empty string (common in Notes for new documents)
+        if result == .noValue { return "" }
+        guard result == .success else { return nil }
+        guard let value else { return "" }
+        if let str = value as? String { return str }
+        if let attrStr = value as? NSAttributedString { return attrStr.string }
+        return nil
+    }
+
     private func copySelectedRange(from element: AXUIElement) -> NSRange? {
         var value: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(
@@ -446,23 +488,29 @@ final class TextInjector: @unchecked Sendable {
     /// When focus is latched, re-resolves within the original app rather than following system focus.
     private func resolveStreamingElement() -> (element: AXUIElement, value: String, selection: NSRange)? {
         if let cached = cachedElement, !isSecureField(cached),
-           let val = copyStringAttribute(kAXValueAttribute, from: cached),
+           let val = copyValueString(from: cached),
            let range = copySelectedRange(from: cached) {
+            axLog.debug("resolveStreamingElement: cached hit, val.len=\(val.count) range=\(range.location),\(range.length)")
             return (cached, val, range)
         }
         // Cached element is missing or stale — try a fresh lookup
+        let hadCache = cachedElement != nil
         cachedElement = nil
         let fresh: AXUIElement?
         if let pid = latchedAppPID {
             fresh = focusedElement(inApp: pid)
+            axLog.info("resolveStreamingElement: cache \(hadCache ? "stale" : "nil"), re-resolved via latched PID \(pid), got=\(fresh != nil)")
         } else {
             fresh = focusedElement()
+            axLog.info("resolveStreamingElement: cache \(hadCache ? "stale" : "nil"), re-resolved via system focus, got=\(fresh != nil)")
         }
         guard let fresh, !isSecureField(fresh),
-              let val = copyStringAttribute(kAXValueAttribute, from: fresh),
+              let val = copyValueString(from: fresh),
               let range = copySelectedRange(from: fresh) else {
+            axLog.error("resolveStreamingElement: fresh element failed AX probe")
             return nil
         }
+        axLog.info("resolveStreamingElement: fresh element OK, val.len=\(val.count) range=\(range.location),\(range.length)")
         cachedElement = fresh
         return (fresh, val, range)
     }

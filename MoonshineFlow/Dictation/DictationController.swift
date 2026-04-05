@@ -3,6 +3,9 @@ import AppKit
 import Combine
 import CoreGraphics
 import Foundation
+import os.log
+
+private let dcLog = Logger(subsystem: "ai.moonshine.flow", category: "DictationController")
 
 enum DictationOutputMode: String, CaseIterable, Identifiable {
     case singleSpeaker
@@ -269,8 +272,11 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                 throw DictationError.modelMissing
             }
 
-            textInjector.beginStreamingSession(focusLocked: sessionFocusMode == .fixed)
+            let focusLocked = sessionFocusMode == .fixed
+            dcLog.info("startSession: focusLocked=\(focusLocked) output=\(self.sessionOutputMode.rawValue) audio=\(self.sessionAudioSourceMode.rawValue)")
+            textInjector.beginStreamingSession(focusLocked: focusLocked)
             insertionMode = textInjector.detectInsertionMode()
+            dcLog.info("startSession: insertionMode=\(self.insertionMode == .accessibility ? "accessibility" : "pasteboard")")
 
             if sessionAudioSourceMode.capturesMicrophone {
                 try ensureMicrophonePermission()
@@ -481,13 +487,17 @@ final class DictationController: ObservableObject, @unchecked Sendable {
                         if !ok {
                             textStateManager.rollbackLastUpdate()
                             streamingFailureCount += 1
+                            dcLog.warning("streamInsert failed (\(self.streamingFailureCount)/\(Self.maxStreamingFailures))")
                             if streamingFailureCount >= Self.maxStreamingFailures {
+                                dcLog.error("streamingFailed = true, giving up for this session")
                                 streamingFailed = true
                             }
                         } else {
                             streamingFailureCount = 0
                         }
                     }
+                } else {
+                    dcLog.debug("skipping streamInsert (streamingFailed=true)")
                 }
             }
 
