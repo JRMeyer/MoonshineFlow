@@ -9,7 +9,7 @@ struct ContentView: View {
         case .idle:
             return .secondary
         case .listening:
-            return .red
+            return .orange
         }
     }
 
