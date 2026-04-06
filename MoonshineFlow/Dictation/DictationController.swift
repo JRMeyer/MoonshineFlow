@@ -3,6 +3,7 @@ import AppKit
 import Combine
 import CoreGraphics
 import Foundation
+import MoonshineVoice
 import os.log
 
 private let dcLog = Logger(subsystem: "ai.moonshine.flow", category: "DictationController")
