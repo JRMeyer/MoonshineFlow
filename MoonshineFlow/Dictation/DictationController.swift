@@ -538,14 +538,20 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     private func prepareSessionTranscribers(modelPath: String) throws {
         if sessionAudioSourceMode.capturesMicrophone {
             if micTranscriber == nil {
-                micTranscriber = Transcriber(modelPath: modelPath)
+                micTranscriber = Transcriber(
+                    modelPath: modelPath,
+                    options: [TranscriberOption(name: "return_audio_data", value: "false")]
+                )
             }
             try micTranscriber?.reset()
         }
 
         if sessionAudioSourceMode.capturesSystemAudio {
             if systemTranscriber == nil {
-                systemTranscriber = Transcriber(modelPath: modelPath)
+                systemTranscriber = Transcriber(
+                    modelPath: modelPath,
+                    options: [TranscriberOption(name: "return_audio_data", value: "false")]
+                )
             }
             try systemTranscriber?.reset()
         }
