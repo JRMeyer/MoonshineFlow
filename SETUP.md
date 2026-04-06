@@ -41,9 +41,10 @@ Xcode will automatically fetch the [moonshine-swift](https://github.com/moonshin
 
 ## 4. Grant permissions
 
-On first run, grant all three in **System Settings > Privacy & Security**:
+On first run, grant all four in **System Settings > Privacy & Security**:
 
 - **Microphone** -- required for audio capture
+- **Screen & System Audio Recording** -- required if you want dictation to include speaker or app output
 - **Accessibility** -- required for text insertion into apps
 - **Input Monitoring** -- required for the global hotkey to work
 
@@ -52,7 +53,7 @@ Permissions attach to the app bundle's code signature, so they persist across re
 ## 5. First functional test
 
 1. Open **TextEdit** and put cursor in a blank document
-2. Launch MoonshineFlow (menu bar icon appears)
+2. Launch MoonshineFlow (the MoonshineFlow menu bar icon appears)
 3. **Double-tap right Option** to start dictation
 4. Speak a short sentence
 5. **Tap right Option** once to stop

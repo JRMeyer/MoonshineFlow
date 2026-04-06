@@ -16,7 +16,7 @@ All transcription runs locally. No audio leaves your machine.
 
 ## How it works
 
-1. Launch the app -- a microphone icon appears in the menu bar
+1. Launch the app -- the MoonshineFlow icon appears in the menu bar
 2. Focus any text field (TextEdit, terminal, browser, Slack, etc.)
 3. **Double-tap right Option** to start dictation
 4. Speak -- text streams into the focused app in real time
@@ -56,7 +56,7 @@ See [SETUP.md](SETUP.md) for the full setup guide.
 
 ## Permissions
 
-Grant all three in **System Settings > Privacy & Security**:
+Grant all four in **System Settings > Privacy & Security**:
 
 | Permission | Why |
 |---|---|
