@@ -10,13 +10,13 @@ let package = Package(
         .executable(name: "MoonshineFlow", targets: ["MoonshineFlow"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/moonshine-ai/moonshine-swift", from: "0.0.51"),
+        .package(path: "../moonshine/swift"),
     ],
     targets: [
         .executableTarget(
             name: "MoonshineFlow",
             dependencies: [
-                .product(name: "MoonshineVoice", package: "moonshine-swift"),
+                .product(name: "MoonshineVoice", package: "swift"),
             ],
             path: "MoonshineFlow",
             exclude: [
