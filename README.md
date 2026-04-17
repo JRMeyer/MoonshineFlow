@@ -35,16 +35,16 @@ On Intel, the default Swift Package Manager dependency on `moonshine-swift` can'
 
 ## Quick start
 
-```bash
-# 1. Clone the moonshine fork with the x86_64 build fix, next to MoonshineFlow.
-git clone --branch intel-x86_64-build git@github.com:tattorba87/moonshine.git ~/dev/moonshine
-cd ~/dev/moonshine && git lfs install && git lfs pull
-# Rebuild the xcframework locally (one-time, ~10 min).
-bash scripts/build-swift.sh
+Clone both repos as **siblings in the same parent directory** — `Package.swift` references `../moonshine/swift`, so they must share a parent.
 
-# 2. Clone MoonshineFlow.
-git clone --branch intel-x86_64-build git@github.com:tattorba87/MoonshineFlow.git ~/dev/MoonshineFlow
-cd ~/dev/MoonshineFlow
+```bash
+# 1. Clone the moonshine fork with the x86_64 build fix.
+git clone --branch intel-x86_64-build git@github.com:tattorba87/moonshine.git
+(cd moonshine && git lfs install && git lfs pull && bash scripts/build-swift.sh)
+
+# 2. Clone MoonshineFlow next to it.
+git clone --branch intel-x86_64-build git@github.com:tattorba87/MoonshineFlow.git
+cd MoonshineFlow
 
 # 3. Download model files (~290MB).
 MODEL_DIR=MoonshineFlow/models/medium-streaming-en
