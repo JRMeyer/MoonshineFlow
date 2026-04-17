@@ -28,12 +28,35 @@ For terminals (Ghostty, Terminal.app, iTerm2, kitty, etc.), completed sentences 
 
 ## Requirements
 
-- macOS 15 or newer on Apple Silicon **or Intel x86_64**
+- macOS 15 or newer on Apple Silicon (or Intel x86_64 — see [Intel x86_64 setup](#intel-x86_64-setup))
 - Xcode (not just Command Line Tools)
 
-On Intel, the default Swift Package Manager dependency on `moonshine-swift` can't be used: the published xcframework's x86_64 slice is missing all Moonshine symbols, so linking fails. This branch (`intel-x86_64-build`) depends on a local build of [tattorba87/moonshine](https://github.com/tattorba87/moonshine) (branch `intel-x86_64-build`, a fork that fixes the build script) checked out as a sibling directory. Apple Silicon users can also use this setup, or stay on `main` and use the published package.
-
 ## Quick start
+
+```bash
+git clone git@github.com:JRMeyer/MoonshineFlow.git
+cd MoonshineFlow
+
+# Download model files (~290MB)
+MODEL_DIR=MoonshineFlow/models/medium-streaming-en
+for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort \
+         frontend.ort streaming_config.json tokenizer.bin; do
+  curl -L "https://download.moonshine.ai/model/medium-streaming-en/quantized/$f" \
+    -o "$MODEL_DIR/$f"
+done
+
+# Build (Xcode fetches the Moonshine package automatically)
+xcodebuild -scheme MoonshineFlow -configuration Release -derivedDataPath build build
+
+# Run
+open build/Build/Products/Release/MoonshineFlow.app
+```
+
+See [SETUP.md](SETUP.md) for the full setup guide.
+
+## Intel x86_64 setup
+
+The published `moonshine-swift` xcframework ships an x86_64 slice that is missing all Moonshine symbols, so the default Quick start above fails to link on Intel Macs. The `intel-x86_64-build` branch depends on a local build of [tattorba87/moonshine](https://github.com/tattorba87/moonshine) (a fork with the build-script fix) checked out as a sibling directory.
 
 Clone both repos as **siblings in the same parent directory** — `Package.swift` references `../moonshine/swift`, so they must share a parent.
 
@@ -46,13 +69,7 @@ git clone --branch intel-x86_64-build git@github.com:tattorba87/moonshine.git
 git clone --branch intel-x86_64-build git@github.com:tattorba87/MoonshineFlow.git
 cd MoonshineFlow
 
-# 3. Download model files (~290MB).
-MODEL_DIR=MoonshineFlow/models/medium-streaming-en
-for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort \
-         frontend.ort streaming_config.json tokenizer.bin; do
-  curl -L "https://download.moonshine.ai/model/medium-streaming-en/quantized/$f" \
-    -o "$MODEL_DIR/$f"
-done
+# 3. Download model files (~290MB) — same as Quick start above.
 
 # 4. Build, install to ~/Applications, and set up autostart.
 scripts/build-app.sh install
@@ -66,8 +83,6 @@ Other build commands:
 - `scripts/build-app.sh uninstall` — remove `~/Applications/MoonshineFlow.app` and the launch agent.
 
 The bundle is ad-hoc signed with a stable identifier (`ai.moonshine.flow`), so TCC grants persist across rebuilds.
-
-See [SETUP.md](SETUP.md) for the full setup guide.
 
 ## Permissions
 
