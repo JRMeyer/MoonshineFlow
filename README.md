@@ -58,6 +58,8 @@ See [SETUP.md](SETUP.md) for the full setup guide.
 
 The published `moonshine-swift` xcframework ships an x86_64 slice that is missing all Moonshine symbols, so the default Quick start above fails to link on Intel Macs. The `intel-x86_64-build` branch depends on a local build of [tattorba87/moonshine](https://github.com/tattorba87/moonshine) (a fork with the build-script fix) checked out as a sibling directory.
 
+> **Note:** the local-fork detour is a temporary workaround. Once the upstream fix lands ([moonshine-ai/moonshine PR TBD](https://github.com/moonshine-ai/moonshine/pulls)) and a new `moonshine-swift` release ships a working x86_64 slice, the steps below can be replaced by the Quick start above.
+
 Clone both repos as **siblings in the same parent directory** — `Package.swift` references `../moonshine/swift`, so they must share a parent.
 
 ```bash
