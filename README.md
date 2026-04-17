@@ -60,7 +60,7 @@ The published `moonshine-swift` xcframework ships an x86_64 slice that is missin
 
 > **Note:** the local-fork detour is a temporary workaround. Once the upstream fix lands ([moonshine-ai/moonshine#165](https://github.com/moonshine-ai/moonshine/pull/165)) and a new `moonshine-swift` release ships a working x86_64 slice, the steps below can be replaced by the Quick start above.
 >
-> The MoonshineFlow-side changes (`scripts/build-app.sh`, conditional `Package.swift`, this section of the README) live on `tattorba87/MoonshineFlow` pending an upstream MoonshineFlow PR ([JRMeyer/MoonshineFlow PR TBD](https://github.com/JRMeyer/MoonshineFlow/pulls)). Once merged, clone from `JRMeyer/MoonshineFlow` `main` instead.
+> The MoonshineFlow-side changes (`scripts/build-app.sh`, conditional `Package.swift`, this section of the README) live on `tattorba87/MoonshineFlow` pending an upstream MoonshineFlow PR ([JRMeyer/MoonshineFlow#18](https://github.com/JRMeyer/MoonshineFlow/pull/18)). Once merged, clone from `JRMeyer/MoonshineFlow` `main` instead.
 
 Clone both repos as **siblings in the same parent directory** — `Package.swift` references `../moonshine/swift`, so they must share a parent.
 
