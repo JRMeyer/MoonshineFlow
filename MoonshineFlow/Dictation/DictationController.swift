@@ -244,15 +244,37 @@ final class DictationController: ObservableObject, @unchecked Sendable {
     }
 
     static func makeDefault() -> DictationController {
-        #if SWIFT_PACKAGE
-        let resourceRoot = Bundle.module.resourceURL
-        #else
-        let resourceRoot = Bundle.main.resourceURL
-        #endif
-        let modelURL = resourceRoot?
-            .appendingPathComponent("models", isDirectory: true)
-            .appendingPathComponent("medium-streaming-en", isDirectory: true)
+        let modelURL = resolveModelURL()
         return DictationController(modelURL: modelURL)
+    }
+
+    private static func resolveModelURL() -> URL? {
+        // Candidate resource roots in priority order. Bundle.main.resourceURL
+        // matches the macOS .app convention (Contents/Resources), which is
+        // where build-app.sh copies the SPM resource bundle's contents for
+        // installed bundles. Bundle.module is SPM's generated accessor for
+        // `swift run`/Xcode builds where the resource bundle sits alongside
+        // the binary; it also serves as a fallback for loose executables.
+        var candidates: [URL] = []
+        if let mainResources = Bundle.main.resourceURL {
+            candidates.append(mainResources)
+        }
+        #if SWIFT_PACKAGE
+        if let moduleResources = Bundle.module.resourceURL {
+            candidates.append(moduleResources)
+        }
+        #endif
+
+        let modelSubpath = "models/medium-streaming-en"
+        for root in candidates {
+            let candidate = root.appendingPathComponent(modelSubpath, isDirectory: true)
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+        }
+        // Fall through to the first candidate so downstream error messaging
+        // stays informative instead of handing back nil.
+        return candidates.first?.appendingPathComponent(modelSubpath, isDirectory: true)
     }
 
     func startSession() {

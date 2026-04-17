@@ -83,8 +83,16 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp "$BINARY" "$APP/Contents/MacOS/MoonshineFlow"
 
+# Place resources both as the SPM resource bundle (so Bundle.module still
+# resolves if you're running from the dev build) and as the bundle's contents
+# copied directly into Contents/Resources (so Bundle.main.resourceURL — the
+# standard macOS layout — also finds them). DictationController.resolveModelURL
+# tries Bundle.main first, so the installed .app works even if the SPM
+# accessor's hardcoded dev buildPath has been cleaned up.
 if [[ -d "$RESOURCE_BUNDLE" ]]; then
 	cp -R "$RESOURCE_BUNDLE" "$APP/Contents/Resources/"
+	# Also copy the bundle's contents (e.g. models/) flat into Resources.
+	cp -R "$RESOURCE_BUNDLE"/* "$APP/Contents/Resources/" 2>/dev/null || true
 fi
 
 # Compile AppIcon.icns from the PNGs in AppIcon.appiconset. iconutil needs
