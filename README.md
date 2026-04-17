@@ -28,16 +28,25 @@ For terminals (Ghostty, Terminal.app, iTerm2, kitty, etc.), completed sentences 
 
 ## Requirements
 
-- macOS 15 or newer on Apple Silicon
+- macOS 15 or newer on Apple Silicon **or Intel x86_64**
 - Xcode (not just Command Line Tools)
+
+On Intel, the default Swift Package Manager dependency on `moonshine-swift` can't be used: the published xcframework's x86_64 slice is missing all Moonshine symbols, so linking fails. This branch (`intel-x86_64-build`) depends on a local build of [tattorba87/moonshine](https://github.com/tattorba87/moonshine) (branch `intel-x86_64-build`, a fork that fixes the build script) checked out as a sibling directory. Apple Silicon users can also use this setup, or stay on `main` and use the published package.
 
 ## Quick start
 
 ```bash
-git clone git@github.com:JRMeyer/MoonshineFlow.git
-cd MoonshineFlow
+# 1. Clone the moonshine fork with the x86_64 build fix, next to MoonshineFlow.
+git clone --branch intel-x86_64-build git@github.com:tattorba87/moonshine.git ~/dev/moonshine
+cd ~/dev/moonshine && git lfs install && git lfs pull
+# Rebuild the xcframework locally (one-time, ~10 min).
+bash scripts/build-swift.sh
 
-# Download model files (~290MB)
+# 2. Clone MoonshineFlow.
+git clone --branch intel-x86_64-build git@github.com:tattorba87/MoonshineFlow.git ~/dev/MoonshineFlow
+cd ~/dev/MoonshineFlow
+
+# 3. Download model files (~290MB).
 MODEL_DIR=MoonshineFlow/models/medium-streaming-en
 for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort \
          frontend.ort streaming_config.json tokenizer.bin; do
@@ -45,12 +54,18 @@ for f in adapter.ort cross_kv.ort decoder_kv.ort encoder.ort \
     -o "$MODEL_DIR/$f"
 done
 
-# Build (Xcode fetches the Moonshine package automatically)
-xcodebuild -scheme MoonshineFlow -configuration Release -derivedDataPath build build
-
-# Run
-open build/Build/Products/Release/MoonshineFlow.app
+# 4. Build, install to ~/Applications, and set up autostart.
+scripts/build-app.sh install
 ```
+
+After `install`, grant Input Monitoring to `~/Applications/MoonshineFlow.app` (System Settings → Privacy & Security → Input Monitoring → `+`). The launch agent auto-starts the app at login and restarts it if it crashes.
+
+Other build commands:
+- `scripts/build-app.sh` — build the debug bundle at `.build/MoonshineFlow.app` without installing.
+- `scripts/build-app.sh run` — build and open the debug bundle for local iteration.
+- `scripts/build-app.sh uninstall` — remove `~/Applications/MoonshineFlow.app` and the launch agent.
+
+The bundle is ad-hoc signed with a stable identifier (`ai.moonshine.flow`), so TCC grants persist across rebuilds.
 
 See [SETUP.md](SETUP.md) for the full setup guide.
 
